@@ -414,9 +414,16 @@ export function LandingPage({ store }: LandingPageProps) {
       ],
     });
     
-    // Adicionar candidatos com o jobId correto
-    demoCandidates.forEach(candidate => {
-      store.addCandidate({ ...candidate, jobId: demoJobId });
+    // Adicionar candidatos localmente (sem API) para o demo
+    const demoCandidatesWithJobId = demoCandidates.map(candidate => ({
+      ...candidate,
+      id: `${candidate.id}-${modelId}`,
+      jobId: demoJobId,
+    }));
+    
+    // Adicionar candidatos diretamente ao estado do store
+    demoCandidatesWithJobId.forEach(candidate => {
+      store.state.candidates.push(candidate);
     });
     
     navigateTo('dashboard');
@@ -441,8 +448,15 @@ export function LandingPage({ store }: LandingPageProps) {
         { id: 'cf6', name: 'Fit Cultural', type: 'rating', icon: 'Users', visibility: { card: true, table: false, detail: true }, maxRating: 5 },
       ],
     });
-    demoCandidates.forEach(candidate => {
-      store.addCandidate({ ...candidate, jobId: demoJobId });
+    // Adicionar candidatos localmente (sem API) para o demo
+    const demoCandidatesWithJobId = demoCandidates.map(candidate => ({
+      ...candidate,
+      id: `${candidate.id}-${key}`,
+      jobId: demoJobId,
+    }));
+    
+    demoCandidatesWithJobId.forEach(candidate => {
+      store.state.candidates.push(candidate);
     });
     navigateTo('dashboard');
   };
