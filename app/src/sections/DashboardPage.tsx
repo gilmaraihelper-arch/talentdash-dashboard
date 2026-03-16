@@ -23,6 +23,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -275,6 +276,12 @@ export function DashboardPage({ store }: DashboardPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<CandidateStatus | 'all'>('all');
   const [shareCopied, setShareCopied] = useState(false);
+  
+  // Estado do dialog de confirmação
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; candidateId: string | null }>({
+    isOpen: false,
+    candidateId: null,
+  });
 
   // Candidatos
   const jobCandidates = useMemo(() => {
@@ -348,9 +355,14 @@ export function DashboardPage({ store }: DashboardPageProps) {
   };
 
   const handleDeleteCandidate = (candidateId: string) => {
-    if (confirm('Tem certeza que deseja excluir este candidato?')) {
-      deleteCandidate(candidateId);
+    setDeleteDialog({ isOpen: true, candidateId });
+  };
+
+  const confirmDeleteCandidate = () => {
+    if (deleteDialog.candidateId) {
+      deleteCandidate(deleteDialog.candidateId);
     }
+    setDeleteDialog({ isOpen: false, candidateId: null });
   };
 
   // Renderizar widget
@@ -831,6 +843,18 @@ export function DashboardPage({ store }: DashboardPageProps) {
           )}
         </div>
       </div>
+      
+      {/* Dialog de confirmação de exclusão */}
+      <ConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog({ isOpen: false, candidateId: null })}
+        onConfirm={confirmDeleteCandidate}
+        title="Excluir candidato"
+        description="Tem certeza que deseja excluir este candidato? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="destructive"
+      />
     </TooltipProvider>
   );
 }

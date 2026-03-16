@@ -38,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PLANS, type PlanType } from '@/types';
 import type { Store } from '@/hooks/useStore';
 
@@ -64,6 +65,12 @@ export function UserDashboardPage({ store }: UserDashboardPageProps) {
   const [showPlanDialog, setShowPlanDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [, setEditingJob] = useState<string | null>(null);
+  
+  // Estado do dialog de confirmação de exclusão
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; jobId: string | null }>({
+    isOpen: false,
+    jobId: null,
+  });
   
   // Profile form state
   const [profileForm, setProfileForm] = useState({
@@ -115,10 +122,16 @@ export function UserDashboardPage({ store }: UserDashboardPageProps) {
     setShowPaymentDialog(false);
   };
 
-  const handleDeleteJob = (_jobId: string) => {
-    if (confirm('Tem certeza que deseja excluir este mapeamento?')) {
+  const handleDeleteJob = (jobId: string) => {
+    setDeleteDialog({ isOpen: true, jobId });
+  };
+
+  const confirmDeleteJob = () => {
+    if (deleteDialog.jobId) {
       // Implementar exclusão no store
+      console.log('Excluindo mapeamento:', deleteDialog.jobId);
     }
+    setDeleteDialog({ isOpen: false, jobId: null });
   };
 
   const getJobStats = (jobId: string) => {
@@ -686,6 +699,18 @@ export function UserDashboardPage({ store }: UserDashboardPageProps) {
           </Tabs>
         </DialogContent>
       </Dialog>
+      
+      {/* Dialog de confirmação de exclusão */}
+      <ConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog({ isOpen: false, jobId: null })}
+        onConfirm={confirmDeleteJob}
+        title="Excluir mapeamento"
+        description="Tem certeza que deseja excluir este mapeamento? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="destructive"
+      />
     </div>
   );
 }

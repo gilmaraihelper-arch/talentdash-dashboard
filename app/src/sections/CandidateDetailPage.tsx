@@ -22,6 +22,8 @@ import { StatusBadge, FieldRenderer, InfoBox } from '@/components/ui/custom';
 import { STATUS_LABELS } from '@/types';
 import { mockCandidates } from '@/data/mock';
 import type { Store } from '@/hooks/useStore';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { useState } from 'react';
 
 interface CandidateDetailPageProps {
   store: Store;
@@ -42,6 +44,9 @@ export function CandidateDetailPage({ store }: CandidateDetailPageProps) {
   const candidate = state.selectedCandidate;
   const job = state.selectedJob;
   
+  // Estado do dialog de confirmação
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
   // Fallback para mockados na demo
   const displayCandidate = candidate || mockCandidates[0];
   const displayJob = job || { 
@@ -50,10 +55,13 @@ export function CandidateDetailPage({ store }: CandidateDetailPageProps) {
   };
   
   const handleDelete = () => {
-    if (confirm('Tem certeza que deseja excluir este candidato?')) {
-      deleteCandidate(displayCandidate.id);
-      navigateTo('dashboard');
-    }
+    setShowDeleteDialog(true);
+  };
+  
+  const confirmDelete = () => {
+    deleteCandidate(displayCandidate.id);
+    setShowDeleteDialog(false);
+    navigateTo('dashboard');
   };
   
   const handleStatusChange = (newStatus: string) => {
@@ -374,6 +382,18 @@ export function CandidateDetailPage({ store }: CandidateDetailPageProps) {
           </div>
         </div>
       </main>
+      
+      {/* Dialog de confirmação de exclusão */}
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={confirmDelete}
+        title="Excluir candidato"
+        description="Tem certeza que deseja excluir este candidato? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="destructive"
+      />
     </div>
   );
 }
