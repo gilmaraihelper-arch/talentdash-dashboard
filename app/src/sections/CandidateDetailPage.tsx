@@ -27,6 +27,16 @@ interface CandidateDetailPageProps {
   store: Store;
 }
 
+// Função para validar URL segura (prevenção XSS)
+const isValidUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    return ['http:', 'https:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+};
+
 export function CandidateDetailPage({ store }: CandidateDetailPageProps) {
   const { navigateTo, state, deleteCandidate, updateCandidate } = store;
   const candidate = state.selectedCandidate;
@@ -150,7 +160,7 @@ export function CandidateDetailPage({ store }: CandidateDetailPageProps) {
                     </div>
                     <div>
                       <p className="text-sm text-slate-500">Currículo</p>
-                      {displayCandidate.curriculo ? (
+                      {displayCandidate.curriculo && isValidUrl(displayCandidate.curriculo) ? (
                         <a 
                           href={displayCandidate.curriculo}
                           target="_blank"
@@ -161,7 +171,9 @@ export function CandidateDetailPage({ store }: CandidateDetailPageProps) {
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       ) : (
-                        <p className="text-slate-400">Não informado</p>
+                        <p className="text-slate-400">
+                          {displayCandidate.curriculo ? 'Link inválido' : 'Não informado'}
+                        </p>
                       )}
                     </div>
                   </div>

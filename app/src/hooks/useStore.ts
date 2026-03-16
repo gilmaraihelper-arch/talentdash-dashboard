@@ -33,10 +33,18 @@ export function useStore() {
 
   // Check for existing token on mount
   useEffect(() => {
-    const token = getAuthToken();
-    if (token) {
-      loadUser();
-    }
+    let isMounted = true;
+    
+    const initAuth = async () => {
+      const token = getAuthToken();
+      if (token && isMounted) {
+        await loadUser();
+      }
+    };
+    
+    initAuth();
+    
+    return () => { isMounted = false; };
   }, []);
 
   // Load user from token

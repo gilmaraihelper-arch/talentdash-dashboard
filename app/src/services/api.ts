@@ -2,6 +2,13 @@ import type { User, Job, Candidate, PaymentMethod } from '@/types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
+// Interface para erros de API
+interface ApiError {
+  message: string;
+  code?: string;
+  status?: number;
+}
+
 // Token storage
 let authToken: string | null = localStorage.getItem('talentdash_token');
 
@@ -34,11 +41,21 @@ const getMockDB = (): MockDB => {
 };
 
 const saveMockDB = (db: MockDB) => {
-  localStorage.setItem(MOCK_DB_KEY, JSON.stringify(db));
+  try {
+    localStorage.setItem(MOCK_DB_KEY, JSON.stringify(db));
+  } catch (e) {
+    console.error('Erro ao salvar no localStorage:', e);
+  }
 };
 
-// Generate ID
-const generateId = () => Math.random().toString(36).substring(2, 15);
+// Generate ID seguro usando crypto.randomUUID
+const generateId = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback para ambientes sem crypto.randomUUID
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+};
 
 // ==================== API REQUEST HELPER ====================
 async function apiRequest<T>(
@@ -65,14 +82,22 @@ async function apiRequest<T>(
     const data = await response.json();
     
     if (!response.ok) {
-      throw new Error(data.error || 'Erro na requisição');
+      const error: ApiError = {
+        message: data.error || 'Erro na requisição',
+        status: response.status,
+        code: data.code,
+      };
+      throw error;
     }
     
     return data;
   } catch (error) {
-    // Se falhar (backend offline), usar mock/localStorage
-    console.log('Backend offline, usando localStorage fallback');
-    return mockApiRequest<T>(endpoint, options);
+    // Se for erro de rede (backend offline), usar mock/localStorage
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      return mockApiRequest<T>(endpoint, options);
+    }
+    // Se for erro de API, propagar
+    throw error;
   }
 }
 
