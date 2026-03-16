@@ -1,17 +1,70 @@
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import type { Job, Candidate } from '@/types';
+import { NOTO_SANS_REGULAR, loadNotoSansFont } from './pdfFonts';
+
+// ============================================
+// EXPORTAÇÃO COM CARREGAMENTO DINÂMICO
+// jsPDF e XLSX só são carregados quando necessário
+// Reduz bundle inicial em ~500KB+
+// ============================================
+
+// Tipos dinâmicos para as libs
+ type XLSXLib = typeof import('xlsx');
+ type JSPDFLib = typeof import('jspdf');
+ type JSPDFAutoTableLib = typeof import('jspdf-autotable');
+
+// Cache para módulos carregados
+let xlsxCache: XLSXLib | null = null;
+let jsPDFCache: { jsPDF: JSPDFLib['default']; autoTable: JSPDFAutoTableLib['default'] } | null = null;
+
+/**
+ * Carrega XLSX dinamicamente (sob demanda)
+ */
+async function loadXLSX(): Promise<XLSXLib> {
+  if (!xlsxCache) {
+    xlsxCache = await import('xlsx');
+  }
+  return xlsxCache;
+}
+
+/**
+ * Carrega jsPDF e jspdf-autotable dinamicamente (sob demanda)
+ * Configura fonte Noto Sans com suporte UTF-8 (acentos, cedilha)
+ */
+async function loadJSPDF(): Promise<{ jsPDF: JSPDFLib['default']; autoTable: JSPDFAutoTableLib['default'] }> {
+  if (!jsPDFCache) {
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ]);
+    
+    // Tenta carregar fonte com suporte UTF-8
+    const fontBase64 = await loadNotoSansFont();
+    
+    if (fontBase64 && fontBase64.length > 100) {
+      // Registrar fonte Noto Sans com suporte UTF-8
+      (jsPDF as any).API.events.push(['addFonts', function(this: any) {
+        this.addFileToVFS('NotoSans-Regular.ttf', fontBase64);
+        this.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
+      }]);
+    }
+    
+    jsPDFCache = { jsPDF, autoTable };
+  }
+  return jsPDFCache;
+}
 
 // ============================================
 // EXPORTAÇÃO PARA EXCEL COM FORMATAÇÃO AVANÇADA
 // ============================================
 
-export function exportToExcel(
+export async function exportToExcel(
   job: Job,
   candidates: Candidate[],
   filename?: string
-): void {
+): Promise<void> {
+  // Carrega XLSX sob demanda
+  const XLSX = await loadXLSX();
+  
   const wb = XLSX.utils.book_new();
   wb.Props = {
     Title: `TalentDash - ${job.name}`,
@@ -100,7 +153,7 @@ export function exportToExcel(
 // EXPORTAÇÃO PARA PDF - ESTILO DASHBOARD
 // ============================================
 
-export function exportToPDF(
+export async function exportToPDF(
   job: Job,
   candidates: Candidate[],
   options?: {
@@ -110,7 +163,10 @@ export function exportToPDF(
     anonymous?: boolean;
     processOnly?: boolean;
   }
-): void {
+): Promise<void> {
+  // Carrega jsPDF sob demanda
+  const { jsPDF, autoTable } = await loadJSPDF();
+  
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -140,8 +196,9 @@ export function exportToPDF(
     reprovado: [239, 68, 68], // Red 500
   };
 
-  // Configurar fonte
-  doc.setFont('helvetica');
+  // Configurar fonte UTF-8 (com fallback para helvetica se NotoSans não estiver disponível)
+  const fontName = (doc as any).getFontList()['NotoSans'] ? 'NotoSans' : 'helvetica';
+  doc.setFont(fontName);
 
   // ========== HEADER ==========
   // Header background
@@ -151,11 +208,11 @@ export function exportToPDF(
   // Logo/Título
   doc.setTextColor(colors.white[0], colors.white[1], colors.white[2]);
   doc.setFontSize(22);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(fontName, 'bold');
   doc.text('TalentDash', margin, 20);
 
   doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(fontName, 'normal');
   doc.text('Relatório de Processo Seletivo', margin, 30);
 
   // Data
@@ -167,13 +224,13 @@ export function exportToPDF(
   
   doc.setTextColor(30, 41, 59); // Slate 800
   doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(fontName, 'bold');
   doc.text(job.name, margin, currentY);
   currentY += 8;
 
   doc.setFontSize(9);
   doc.setTextColor(colors.slate[0], colors.slate[1], colors.slate[2]);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(fontName, 'normal');
   doc.text(`Total de candidatos: ${candidates.length}`, margin, currentY);
   currentY += 15;
 
@@ -194,22 +251,22 @@ export function exportToPDF(
     
     // Card background
     doc.setFillColor(colors.light[0], colors.light[1], colors.light[2]);
-    doc.roundedRect(x, currentY, cardWidth, cardHeight, 2, 2, 'F');
+    (doc as any).roundedRect(x, currentY, cardWidth, cardHeight, 2, 2, 'F');
     
     // Color bar on top
     doc.setFillColor(kpi.color[0], kpi.color[1], kpi.color[2]);
-    doc.roundedRect(x, currentY, cardWidth, 4, 2, 2, 'F');
+    (doc as any).roundedRect(x, currentY, cardWidth, 4, 2, 2, 'F');
     
     // Label
     doc.setTextColor(colors.slate[0], colors.slate[1], colors.slate[2]);
     doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(fontName, 'normal');
     doc.text(kpi.label, x + 4, currentY + 12);
     
     // Value
     doc.setTextColor(15, 23, 42); // Slate 900
     doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(fontName, 'bold');
     doc.text(kpi.value, x + 4, currentY + 22);
   });
 
@@ -224,7 +281,7 @@ export function exportToPDF(
   // Section title
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(fontName, 'bold');
   doc.text('Distribuição por Etapa', margin, currentY);
   currentY += 8;
 
@@ -249,22 +306,22 @@ export function exportToPDF(
     // Label
     doc.setTextColor(colors.slate[0], colors.slate[1], colors.slate[2]);
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(fontName, 'normal');
     doc.text(item.label, margin, y + 7);
     
     // Bar background
     doc.setFillColor(226, 232, 240); // Slate 200
-    doc.roundedRect(margin + 35, y, barMaxWidth, barHeight, 2, 2, 'F');
+    (doc as any).roundedRect(margin + 35, y, barMaxWidth, barHeight, 2, 2, 'F');
     
     // Bar
     if (barWidth > 0) {
       doc.setFillColor(item.color[0], item.color[1], item.color[2]);
-      doc.roundedRect(margin + 35, y, barWidth, barHeight, 2, 2, 'F');
+      (doc as any).roundedRect(margin + 35, y, barWidth, barHeight, 2, 2, 'F');
     }
     
     // Count
     doc.setTextColor(15, 23, 42);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(fontName, 'bold');
     doc.text(item.count.toString(), margin + 35 + barMaxWidth + 5, y + 7);
   });
 
@@ -278,7 +335,7 @@ export function exportToPDF(
 
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(fontName, 'bold');
   doc.text('Status dos Candidatos', margin, currentY);
   currentY += 10;
 
@@ -308,7 +365,7 @@ export function exportToPDF(
     // Label and count
     doc.setTextColor(colors.slate[0], colors.slate[1], colors.slate[2]);
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(fontName, 'normal');
     doc.text(`${status.label}: ${status.count}`, x + 10, y + 5);
   });
 
@@ -323,7 +380,7 @@ export function exportToPDF(
 
     doc.setTextColor(15, 23, 42);
     doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(fontName, 'bold');
     doc.text(options?.anonymous ? 'Lista de Candidatos (Anônima)' : 'Lista de Candidatos', margin, currentY);
     currentY += 10;
 
@@ -424,7 +481,7 @@ export function exportToPDF(
     currentY += 10;
     doc.setTextColor(colors.slate[0], colors.slate[1], colors.slate[2]);
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'italic');
+    doc.setFont(fontName, 'italic');
     doc.text('Este relatório contém apenas dados agregados do processo seletivo.', margin, currentY);
     
     // Footer
@@ -457,7 +514,10 @@ export function generateGoogleSheetsLink(job: Job): string {
 // TEMPLATE EXCEL AVANÇADO PARA IMPORTAÇÃO
 // ============================================
 
-export function generateAdvancedExcelTemplate(job: Job): void {
+export async function generateAdvancedExcelTemplate(job: Job): Promise<void> {
+  // Carrega XLSX sob demanda
+  const XLSX = await loadXLSX();
+  
   const wb = XLSX.utils.book_new();
 
   // Aba de instruções

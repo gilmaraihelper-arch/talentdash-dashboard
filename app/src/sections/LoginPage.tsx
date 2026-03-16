@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { 
   Eye, 
   EyeOff, 
@@ -6,13 +8,16 @@ import {
   Lock, 
   ArrowRight,
   TrendingUp,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { loginSchema, type LoginFormData } from '@/lib/validation';
 import type { Store } from '@/hooks/useStore';
 
 interface LoginPageProps {
@@ -23,43 +28,45 @@ export function LoginPage({ store }: LoginPageProps) {
   const { navigateTo, login } = store;
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    watch,
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    mode: 'onChange',
+    defaultValues: {
+      email: '',
+      password: '',
+      rememberMe: false,
+    },
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!formData.email) {
-      newErrors.email = 'E-mail é obrigatório';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'E-mail inválido';
-    }
-    
-    if (!formData.password) {
-      newErrors.password = 'Senha é obrigatória';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Senha deve ter pelo menos 6 caracteres';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const emailValue = watch('email');
+  const passwordValue = watch('password');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-    
+  const onSubmit = async (data: LoginFormData) => {
+    setLoginError(null);
     setIsLoading(true);
     
-    // Simulação de chamada API
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    login(formData.email, formData.password);
-    setIsLoading(false);
+    try {
+      // Simulação de chamada API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simula erro de login para demonstração (em produção, isso viria da API)
+      // if (data.email === 'erro@exemplo.com') {
+      //   throw new Error('Credenciais inválidas');
+      // }
+      
+      login(data.email, data.password);
+    } catch (error) {
+      setLoginError('E-mail ou senha incorretos. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDemoLogin = async () => {
@@ -133,7 +140,16 @@ export function LoginPage({ store }: LoginPageProps) {
           </CardHeader>
           
           <CardContent className="space-y-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {loginError && (
+              <Alert variant="destructive" className="bg-rose-50 border-rose-200">
+                <AlertCircle className="h-4 w-4 text-rose-500" />
+                <AlertDescription className="text-rose-700">
+                  {loginError}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">E-mail</label>
                 <div className="relative">
@@ -141,13 +157,21 @@ export function LoginPage({ store }: LoginPageProps) {
                   <Input
                     type="email"
                     placeholder="seu@email.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className={`pl-10 ${errors.email ? 'border-rose-500' : ''}`}
+                    className={`pl-10 transition-colors ${
+                      errors.email 
+                        ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-200' 
+                        : emailValue && !errors.email
+                        ? 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-200'
+                        : ''
+                    }`}
+                    {...register('email')}
                   />
                 </div>
                 {errors.email && (
-                  <p className="text-xs text-rose-500">{errors.email}</p>
+                  <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{errors.email.message}</span>
+                  </div>
                 )}
               </div>
               
@@ -158,9 +182,14 @@ export function LoginPage({ store }: LoginPageProps) {
                   <Input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className={`pl-10 pr-10 ${errors.password ? 'border-rose-500' : ''}`}
+                    className={`pl-10 pr-10 transition-colors ${
+                      errors.password 
+                        ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-200' 
+                        : passwordValue && !errors.password
+                        ? 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-200'
+                        : ''
+                    }`}
+                    {...register('password')}
                   />
                   <button
                     type="button"
@@ -171,13 +200,20 @@ export function LoginPage({ store }: LoginPageProps) {
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-xs text-rose-500">{errors.password}</p>
+                  <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{errors.password.message}</span>
+                  </div>
                 )}
               </div>
               
               <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm text-slate-600">
-                  <input type="checkbox" className="rounded border-slate-300" />
+                <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    {...register('rememberMe')}
+                  />
                   Lembrar-me
                 </label>
                 <button type="button" className="text-sm text-indigo-600 hover:text-indigo-700">
@@ -188,9 +224,9 @@ export function LoginPage({ store }: LoginPageProps) {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 h-11"
-                disabled={isLoading}
+                disabled={isLoading || isSubmitting}
               >
-                {isLoading ? (
+                {isLoading || isSubmitting ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <>
@@ -207,7 +243,7 @@ export function LoginPage({ store }: LoginPageProps) {
               variant="outline"
               className="w-full h-11"
               onClick={handleDemoLogin}
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting}
             >
               Entrar com conta demo
             </Button>

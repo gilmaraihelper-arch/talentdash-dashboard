@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { 
   ArrowLeft, 
   Users, 
@@ -282,6 +282,21 @@ export function DashboardPage({ store }: DashboardPageProps) {
     isOpen: false,
     candidateId: null,
   });
+  
+  // Estado de loading para exportações
+  const [exportLoading, setExportLoading] = useState<{
+    excel: boolean;
+    pdf: boolean;
+    pdfAnonymous: boolean;
+    pdfProcessOnly: boolean;
+    template: boolean;
+  }>({
+    excel: false,
+    pdf: false,
+    pdfAnonymous: false,
+    pdfProcessOnly: false,
+    template: false,
+  });
 
   // Candidatos
   const jobCandidates = useMemo(() => {
@@ -364,6 +379,52 @@ export function DashboardPage({ store }: DashboardPageProps) {
     }
     setDeleteDialog({ isOpen: false, candidateId: null });
   };
+
+  // Handlers de exportação assíncronos
+  const handleExportExcel = useCallback(async () => {
+    setExportLoading(prev => ({ ...prev, excel: true }));
+    try {
+      await exportToExcel(job, filteredCandidates);
+    } finally {
+      setExportLoading(prev => ({ ...prev, excel: false }));
+    }
+  }, [job, filteredCandidates]);
+
+  const handleExportPDF = useCallback(async () => {
+    setExportLoading(prev => ({ ...prev, pdf: true }));
+    try {
+      await exportToPDF(job, filteredCandidates, { includeSummary: true });
+    } finally {
+      setExportLoading(prev => ({ ...prev, pdf: false }));
+    }
+  }, [job, filteredCandidates]);
+
+  const handleExportPDFAnonymous = useCallback(async () => {
+    setExportLoading(prev => ({ ...prev, pdfAnonymous: true }));
+    try {
+      await exportToPDF(job, filteredCandidates, { includeSummary: true, anonymous: true });
+    } finally {
+      setExportLoading(prev => ({ ...prev, pdfAnonymous: false }));
+    }
+  }, [job, filteredCandidates]);
+
+  const handleExportPDFProcessOnly = useCallback(async () => {
+    setExportLoading(prev => ({ ...prev, pdfProcessOnly: true }));
+    try {
+      await exportToPDF(job, filteredCandidates, { includeSummary: true, processOnly: true });
+    } finally {
+      setExportLoading(prev => ({ ...prev, pdfProcessOnly: false }));
+    }
+  }, [job, filteredCandidates]);
+
+  const handleGenerateTemplate = useCallback(async () => {
+    setExportLoading(prev => ({ ...prev, template: true }));
+    try {
+      await generateAdvancedExcelTemplate(job);
+    } finally {
+      setExportLoading(prev => ({ ...prev, template: false }));
+    }
+  }, [job]);
 
   // Renderizar widget
   const renderWidget = (widget: DashboardWidget) => {
@@ -556,26 +617,26 @@ export function DashboardPage({ store }: DashboardPageProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64">
-                  <DropdownMenuItem onClick={() => exportToExcel(job, filteredCandidates)}>
-                    <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
-                    Exportar para Excel
+                  <DropdownMenuItem onClick={handleExportExcel} disabled={exportLoading.excel}>
+                    <FileSpreadsheet className={`w-4 h-4 mr-2 text-emerald-600 ${exportLoading.excel ? 'animate-pulse' : ''}`} />
+                    {exportLoading.excel ? 'Gerando Excel...' : 'Exportar para Excel'}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportToPDF(job, filteredCandidates, { includeSummary: true })}>
-                    <FileText className="w-4 h-4 mr-2 text-rose-600" />
-                    Exportar para PDF
+                  <DropdownMenuItem onClick={handleExportPDF} disabled={exportLoading.pdf}>
+                    <FileText className={`w-4 h-4 mr-2 text-rose-600 ${exportLoading.pdf ? 'animate-pulse' : ''}`} />
+                    {exportLoading.pdf ? 'Gerando PDF...' : 'Exportar para PDF'}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportToPDF(job, filteredCandidates, { includeSummary: true, anonymous: true })}>
-                    <FileText className="w-4 h-4 mr-2 text-amber-600" />
-                    PDF Anônimo (sem nomes)
+                  <DropdownMenuItem onClick={handleExportPDFAnonymous} disabled={exportLoading.pdfAnonymous}>
+                    <FileText className={`w-4 h-4 mr-2 text-amber-600 ${exportLoading.pdfAnonymous ? 'animate-pulse' : ''}`} />
+                    {exportLoading.pdfAnonymous ? 'Gerando PDF...' : 'PDF Anônimo (sem nomes)'}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportToPDF(job, filteredCandidates, { includeSummary: true, processOnly: true })}>
-                    <FileText className="w-4 h-4 mr-2 text-blue-600" />
-                    Apenas Dados do Processo
+                  <DropdownMenuItem onClick={handleExportPDFProcessOnly} disabled={exportLoading.pdfProcessOnly}>
+                    <FileText className={`w-4 h-4 mr-2 text-blue-600 ${exportLoading.pdfProcessOnly ? 'animate-pulse' : ''}`} />
+                    {exportLoading.pdfProcessOnly ? 'Gerando PDF...' : 'Apenas Dados do Processo'}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => generateAdvancedExcelTemplate(job)}>
-                    <FileSpreadsheet className="w-4 h-4 mr-2 text-blue-600" />
-                    Baixar Template Excel
+                  <DropdownMenuItem onClick={handleGenerateTemplate} disabled={exportLoading.template}>
+                    <FileSpreadsheet className={`w-4 h-4 mr-2 text-blue-600 ${exportLoading.template ? 'animate-pulse' : ''}`} />
+                    {exportLoading.template ? 'Gerando Template...' : 'Baixar Template Excel'}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => window.open(generateGoogleSheetsLink(job), '_blank')}>
                     <ExternalLink className="w-4 h-4 mr-2 text-green-600" />

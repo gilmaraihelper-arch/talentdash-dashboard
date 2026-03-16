@@ -1,0 +1,154 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum para os planos de assinatura
+enum Plan {
+  FREE
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+// Enum para status do candidato
+enum CandidateStatus {
+  NEW
+  ANALYZING
+  REVIEW
+  INTERVIEW
+  APPROVED
+  REJECTED
+}
+
+// Enum para tipos de pagamento
+enum PaymentType {
+  CREDIT_CARD
+  DEBIT_CARD
+  PIX
+  BOLETO
+}
+
+// Model de Usuário
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  password     String
+  name         String
+  companyName  String?
+  plan         Plan      @default(FREE)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relacionamentos
+  jobs           Job[]
+  paymentMethods PaymentMethod[]
+
+  @@map("users")
+}
+
+// Model de Vaga/Job
+model Job {
+  id           String   @id @default(uuid())
+  userId       String
+  name         String
+  description  String?
+  template     String   @default("default")
+  colorTheme   String   @default("blue")
+  customFields Json?    // Campos customizáveis em JSON
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relacionamentos
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  candidates Candidate[]
+
+  @@map("jobs")
+}
+
+// Model de Candidato
+model Candidate {
+  id          String          @id @default(uuid())
+  jobId       String
+  nome        String
+  idade       Int?
+  cidade      String?
+  estado      String?
+  email       String?
+  telefone    String?
+  linkedin    String?
+  portfolio   String?
+  status      CandidateStatus @default(NEW)
+  
+  // Currículo e informações profissionais
+  curriculo         String?  // URL do arquivo
+  curriculoTexto    String?  // Texto extraído do currículo
+  experiencia       Json?    // Array de experiências
+  formacao          Json?    // Array de formações
+  habilidades       String[] // Array de skills
+  pretensaoSalarial Float?
+  
+  // Campos customizados (dinâmicos por job)
+  customData  Json?
+  
+  // Análise IA
+  iaSummary      String?  // Resumo gerado pela IA
+  iaScore        Float?   // Score de match (0-100)
+  iaAnalysis     Json?    // Análise detalhada da IA
+  
+  // Timeline
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  analyzedAt DateTime? // Quando a IA analisou
+
+  // Relacionamentos
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("candidates")
+}
+
+// Model de Método de Pagamento
+model PaymentMethod {
+  id        String      @id @default(uuid())
+  userId    String
+  type      PaymentType
+  last4     String?     // Últimos 4 dígitos do cartão
+  brand     String?     // Visa, Mastercard, etc
+  expMonth  Int?
+  expYear   Int?
+  holderName String?
+  isDefault Boolean     @default(false)
+  
+  // Para PIX
+  pixKey    String?
+  
+  // IDs externos (Stripe, etc)
+  externalId String?
+  
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // Relacionamentos
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("payment_methods")
+}
+
+// Model de Convite/Token de Verificação
+model VerificationToken {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([email, token])
+  @@map("verification_tokens")
+}

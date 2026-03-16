@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { 
   ArrowLeft, 
   Plus, 
@@ -69,6 +71,7 @@ import {
   type ColorTheme
 } from '@/types';
 import { Stepper, InfoBox, HelpTooltip } from '@/components/ui/custom';
+import { jobInfoSchema, customFieldSchema, type JobInfoFormData, type CustomFieldFormData } from '@/lib/validation';
 import type { Store } from '@/hooks/useStore';
 
 interface CreateJobPageProps {
@@ -140,8 +143,6 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
   const { navigateTo, createJob } = store;
   
   const [currentStep, setCurrentStep] = useState(0);
-  const [jobName, setJobName] = useState('');
-  const [jobDescription, setJobDescription] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('pro');
   const [selectedTemplate, setSelectedTemplate] = useState<JobTemplateType>('blank');
   const [selectedDashboardModel, setSelectedDashboardModel] = useState<DashboardModel>('padrao');
@@ -150,20 +151,71 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
   const [showAddFieldDialog, setShowAddFieldDialog] = useState(false);
   const [showTemplateConfirmDialog, setShowTemplateConfirmDialog] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<JobTemplateType | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   
-  // Form de novo campo
-  const [newFieldName, setNewFieldName] = useState('');
-  const [newFieldType, setNewFieldType] = useState<FieldType>('text');
-  const [newFieldIcon, setNewFieldIcon] = useState('Star');
-  const [newFieldOptions, setNewFieldOptions] = useState('');
-  const [newFieldVisibility, setNewFieldVisibility] = useState({ card: true, table: true, detail: true });
+  // Form de informações básicas
+  const {
+    register,
+    formState: { errors: infoErrors },
+    watch: watchInfo,
+    trigger: triggerInfo,
+  } = useForm<JobInfoFormData>({
+    resolver: zodResolver(jobInfoSchema),
+    mode: 'onChange',
+    defaultValues: {
+      jobName: '',
+      jobDescription: '',
+    },
+  });
+
+  const jobInfo = watchInfo();
+  
+  // Form de novo campo personalizado
+  const {
+    register: registerField,
+    handleSubmit: handleSubmitField,
+    formState: { errors: fieldErrors },
+    watch: watchField,
+    reset: resetField,
+  } = useForm<CustomFieldFormData>({
+    resolver: zodResolver(customFieldSchema),
+    mode: 'onChange',
+    defaultValues: {
+      fieldName: '',
+      fieldType: 'text',
+      fieldOptions: '',
+      fieldIcon: 'Star',
+      visibility: { card: true, table: true, detail: true },
+    },
+  });
+
+  const fieldFormValues = watchField();
   
   const maxFields = PLANS[selectedPlan].maxCustomFields;
   const remainingFields = maxFields === Infinity ? 'Ilimitado' : maxFields - customFields.length;
   const canAddMore = maxFields === Infinity || customFields.length < maxFields;
   
-  const handleNext = () => {
-    if (currentStep < createJobSteps.length - 1) {
+  const handleNext = async () => {
+    let canProceed = false;
+    
+    switch (currentStep) {
+      case 0: // Template - sempre pode avançar
+        canProceed = true;
+        break;
+      case 1: // Informações - valida o form
+        canProceed = await triggerInfo();
+        break;
+      case 2: // Campos personalizados - sempre pode avançar
+        canProceed = true;
+        break;
+      case 3: // Dashboard - sempre pode avançar
+        canProceed = true;
+        break;
+      default:
+        canProceed = true;
+    }
+    
+    if (canProceed && currentStep < createJobSteps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -205,23 +257,21 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
     setPendingTemplate(null);
   };
   
-  const handleAddField = () => {
-    if (!newFieldName.trim()) return;
-    
+  const onAddField = (data: CustomFieldFormData) => {
     const field: CustomField = {
       id: `cf-${Date.now()}`,
-      name: newFieldName.trim(),
-      type: newFieldType,
-      icon: newFieldIcon,
-      visibility: { ...newFieldVisibility },
-      ...(newFieldType === 'select' && newFieldOptions 
-        ? { options: newFieldOptions.split(',').map(o => o.trim()).filter(Boolean) }
+      name: data.fieldName.trim(),
+      type: data.fieldType,
+      icon: data.fieldIcon,
+      visibility: { ...data.visibility },
+      ...(data.fieldType === 'select' && data.fieldOptions 
+        ? { options: data.fieldOptions.split(',').map(o => o.trim()).filter(Boolean) }
         : {}),
-      ...(newFieldType === 'rating' ? { maxRating: 5 } : {}),
+      ...(data.fieldType === 'rating' ? { maxRating: 5 } : {}),
     };
     
     setCustomFields([...customFields, field]);
-    resetFieldForm();
+    resetField();
     setShowAddFieldDialog(false);
   };
   
@@ -229,24 +279,22 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
     setCustomFields(customFields.filter(f => f.id !== id));
   };
   
-  const resetFieldForm = () => {
-    setNewFieldName('');
-    setNewFieldType('text');
-    setNewFieldIcon('Star');
-    setNewFieldOptions('');
-    setNewFieldVisibility({ card: true, table: true, detail: true });
-  };
-  
   const handleCreateJob = () => {
-    if (!jobName.trim()) return;
+    if (!jobInfo.jobName.trim()) return;
     
-    createJob(jobName.trim(), selectedPlan, customFields, {
-      template: selectedTemplate,
-      dashboardModel: selectedDashboardModel,
-      colorTheme: selectedColorTheme,
-      description: jobDescription,
-    });
-    navigateTo('data-structure');
+    setIsCreating(true);
+    
+    // Simula um pequeno delay para mostrar loading
+    setTimeout(() => {
+      createJob(jobInfo.jobName.trim(), selectedPlan, customFields, {
+        template: selectedTemplate,
+        dashboardModel: selectedDashboardModel,
+        colorTheme: selectedColorTheme,
+        description: jobInfo.jobDescription,
+      });
+      navigateTo('data-structure');
+      setIsCreating(false);
+    }, 500);
   };
   
   const getFieldTypeIcon = (type: FieldType) => {
@@ -254,15 +302,14 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
     return <Icon className="w-4 h-4" />;
   };
 
-  const canProceed = () => {
-    switch (currentStep) {
-      case 0: return true;
-      case 1: return jobName.trim().length > 0;
-      case 2: return true;
-      case 3: return true;
-      case 4: return true;
-      default: return false;
+  const getInputClassName = (hasError: boolean, isValid: boolean) => {
+    if (hasError) {
+      return 'border-rose-500 focus:border-rose-500 focus:ring-rose-200';
     }
+    if (isValid) {
+      return 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-200';
+    }
+    return '';
   };
 
   const currentTheme = COLOR_THEMES[selectedColorTheme];
@@ -320,8 +367,8 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <InfoBox type="tip" title="Dica">
-                    Os templates já vêm com critérios de análise sugeridos para cada tipo de vaga. 
-                    Você pode personalizar tudo depois!
+                    Os templates economizam tempo ao pré-configurar critérios comuns para cada tipo de vaga. 
+                    Escolha o que mais se aproxima do seu caso ou comece do zero.
                   </InfoBox>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -412,12 +459,20 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
                         className="ml-2"
                       />
                     </Label>
-                    <Input
-                      id="jobName"
-                      placeholder="Ex: Análise Candidatos Frontend"
-                      value={jobName}
-                      onChange={(e) => setJobName(e.target.value)}
-                    />
+                    <div className="space-y-1">
+                      <Input
+                        id="jobName"
+                        placeholder="Ex: Análise Candidatos Frontend"
+                        className={getInputClassName(!!infoErrors.jobName, !!jobInfo.jobName && !infoErrors.jobName)}
+                        {...register('jobName')}
+                      />
+                      {infoErrors.jobName && (
+                        <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span>{infoErrors.jobName.message}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -428,13 +483,21 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
                         className="ml-2"
                       />
                     </Label>
-                    <Textarea
-                      id="jobDescription"
-                      placeholder="Ex: Processo seletivo para equipe de vendas do segundo semestre"
-                      value={jobDescription}
-                      onChange={(e) => setJobDescription(e.target.value)}
-                      rows={3}
-                    />
+                    <div className="space-y-1">
+                      <Textarea
+                        id="jobDescription"
+                        placeholder="Ex: Processo seletivo para equipe de vendas do segundo semestre"
+                        className={getInputClassName(!!infoErrors.jobDescription, !!jobInfo.jobDescription && !infoErrors.jobDescription)}
+                        {...register('jobDescription')}
+                        rows={3}
+                      />
+                      {infoErrors.jobDescription && (
+                        <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span>{infoErrors.jobDescription.message}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="space-y-3">
@@ -692,7 +755,7 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
                           <BarChart3 className="w-5 h-5" />
                         </div>
                         <div>
-                          <div className="font-semibold">{jobName || 'Seu Mapeamento'}</div>
+                          <div className="font-semibold">{jobInfo.jobName || 'Seu Mapeamento'}</div>
                           <div className="text-xs text-slate-500">{DASHBOARD_MODELS[selectedDashboardModel].name}</div>
                         </div>
                       </div>
@@ -755,9 +818,9 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
                   <div className="space-y-4">
                     <div className="p-4 bg-slate-50 rounded-lg">
                       <p className="text-sm text-slate-500 mb-1">Nome do Mapeamento</p>
-                      <p className="text-lg font-semibold">{jobName || '-'}</p>
-                      {jobDescription && (
-                        <p className="text-sm text-slate-600 mt-1">{jobDescription}</p>
+                      <p className="text-lg font-semibold">{jobInfo.jobName || '-'}</p>
+                      {jobInfo.jobDescription && (
+                        <p className="text-sm text-slate-600 mt-1">{jobInfo.jobDescription}</p>
                       )}
                     </div>
                     
@@ -847,7 +910,6 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
               {currentStep < createJobSteps.length - 1 ? (
                 <Button
                   onClick={handleNext}
-                  disabled={!canProceed()}
                 >
                   Próximo
                   <ChevronRight className="w-4 h-4 ml-2" />
@@ -855,10 +917,14 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
               ) : (
                 <Button
                   onClick={handleCreateJob}
-                  disabled={!jobName.trim()}
+                  disabled={!jobInfo.jobName.trim() || isCreating}
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  <Check className="w-4 h-4 mr-2" />
+                  {isCreating ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                  ) : (
+                    <Check className="w-4 h-4 mr-2" />
+                  )}
                   Criar Mapeamento
                 </Button>
               )}
@@ -919,7 +985,7 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">Nome:</span>
-                    <span className="font-medium truncate max-w-[150px]">{jobName || '-'}</span>
+                    <span className="font-medium truncate max-w-[150px]">{jobInfo.jobName || '-'}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">Plano:</span>
@@ -954,15 +1020,23 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
+          <form onSubmit={handleSubmitField(onAddField)} className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="fieldName">Nome do Campo *</Label>
-              <Input
-                id="fieldName"
-                placeholder="Ex: Anos de experiência"
-                value={newFieldName}
-                onChange={(e) => setNewFieldName(e.target.value)}
-              />
+              <div className="space-y-1">
+                <Input
+                  id="fieldName"
+                  placeholder="Ex: Anos de experiência"
+                  className={getInputClassName(!!fieldErrors.fieldName, !!fieldFormValues.fieldName && !fieldErrors.fieldName)}
+                  {...registerField('fieldName')}
+                />
+                {fieldErrors.fieldName && (
+                  <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{fieldErrors.fieldName.message}</span>
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -971,9 +1045,10 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
                 {(Object.keys(FIELD_TYPE_CONFIG) as FieldType[]).map((type) => (
                   <button
                     key={type}
-                    onClick={() => setNewFieldType(type)}
+                    type="button"
+                    onClick={() => registerField('fieldType').onChange({ target: { value: type } })}
                     className={`p-3 rounded-lg border text-left transition-all ${
-                      newFieldType === type
+                      fieldFormValues.fieldType === type
                         ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
                         : 'border-slate-200 hover:border-slate-300'
                     }`}
@@ -992,11 +1067,11 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
                 ))}
               </div>
               <InfoBox type="tip" className="mt-2">
-                <strong>Exemplo:</strong> {FIELD_TYPE_CONFIG[newFieldType].example}
+                <strong>Exemplo:</strong> {FIELD_TYPE_CONFIG[fieldFormValues.fieldType].example}
               </InfoBox>
             </div>
             
-            {newFieldType === 'select' && (
+            {fieldFormValues.fieldType === 'select' && (
               <div className="space-y-2">
                 <Label htmlFor="fieldOptions">
                   Opções (separadas por vírgula)
@@ -1008,15 +1083,17 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
                 <Input
                   id="fieldOptions"
                   placeholder="Ex: Básico, Intermediário, Avançado, Fluente"
-                  value={newFieldOptions}
-                  onChange={(e) => setNewFieldOptions(e.target.value)}
+                  {...registerField('fieldOptions')}
                 />
               </div>
             )}
             
             <div className="space-y-2">
               <Label>Ícone</Label>
-              <Select value={newFieldIcon} onValueChange={setNewFieldIcon}>
+              <Select 
+                value={fieldFormValues.fieldIcon} 
+                onValueChange={(value) => registerField('fieldIcon').onChange({ target: { value } })}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -1039,52 +1116,56 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
                 />
               </Label>
               <div className="flex gap-4">
-                <label className="flex items-center gap-2">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <Checkbox 
-                    checked={newFieldVisibility.card}
+                    checked={fieldFormValues.visibility.card}
                     onCheckedChange={(checked) => 
-                      setNewFieldVisibility(prev => ({ ...prev, card: checked as boolean }))
+                      registerField('visibility.card').onChange({ target: { value: checked } })
                     }
                   />
                   <span className="text-sm">Card</span>
                 </label>
-                <label className="flex items-center gap-2">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <Checkbox 
-                    checked={newFieldVisibility.table}
+                    checked={fieldFormValues.visibility.table}
                     onCheckedChange={(checked) => 
-                      setNewFieldVisibility(prev => ({ ...prev, table: checked as boolean }))
+                      registerField('visibility.table').onChange({ target: { value: checked } })
                     }
                   />
                   <span className="text-sm">Tabela</span>
                 </label>
-                <label className="flex items-center gap-2">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <Checkbox 
-                    checked={newFieldVisibility.detail}
+                    checked={fieldFormValues.visibility.detail}
                     onCheckedChange={(checked) => 
-                      setNewFieldVisibility(prev => ({ ...prev, detail: checked as boolean }))
+                      registerField('visibility.detail').onChange({ target: { value: checked } })
                     }
                   />
                   <span className="text-sm">Detalhe</span>
                 </label>
               </div>
             </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              resetFieldForm();
-              setShowAddFieldDialog(false);
-            }}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleAddField}
-              disabled={!newFieldName.trim()}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar
-            </Button>
-          </DialogFooter>
+            
+            <DialogFooter className="pt-4">
+              <Button 
+                type="button"
+                variant="outline" 
+                onClick={() => {
+                  resetField();
+                  setShowAddFieldDialog(false);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit"
+                disabled={!fieldFormValues.fieldName.trim()}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

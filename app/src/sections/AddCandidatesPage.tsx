@@ -1,4 +1,6 @@
 import { useState, useRef } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { 
   ArrowLeft, 
   Upload, 
@@ -9,7 +11,8 @@ import {
   Check,
   FileSpreadsheet,
   ChevronRight,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,8 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { BASIC_FIELDS, STATUS_LABELS, type CandidateStatus, type CustomField } from '@/types';
+import { BASIC_FIELDS, STATUS_LABELS, type CustomField } from '@/types';
 import { StatusBadge, Stepper, InfoBox } from '@/components/ui/custom';
+import { candidateSchema, candidateStatusSchema, type CandidateFormData } from '@/lib/validation';
+import { z } from 'zod';
 import type { Store } from '@/hooks/useStore';
 
 interface AddCandidatesPageProps {
@@ -50,13 +55,33 @@ export function AddCandidatesPage({ store }: AddCandidatesPageProps) {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [parsedCandidates, setParsedCandidates] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Form de candidato manual
-  const [manualForm, setManualForm] = useState<Record<string, any>>({
-    status: 'triagem',
-  });
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors, isSubmitting },
+    watch,
+    trigger,
+  } = useForm<CandidateFormData>({
+    resolver: zodResolver(candidateSchema),
+    mode: 'onChange',
+    defaultValues: {
+      nome: '',
+      idade: undefined,
+      cidade: '',
+      curriculo: '',
+      pretensaoSalarial: undefined,
+      salarioAtual: undefined,
+      status: 'triagem',
+      observacoes: '',
+    },
+  });
+
+  const formValues = watch();
+
   if (!job) {
     navigateTo('create-job');
     return null;
@@ -136,20 +161,20 @@ export function AddCandidatesPage({ store }: AddCandidatesPageProps) {
     navigateTo('dashboard');
   };
   
-  const handleManualSubmit = () => {
+  const onSubmit = (data: CandidateFormData) => {
     const candidate = {
       id: `manual-${Date.now()}`,
       jobId: job.id,
-      nome: manualForm.nome || '',
-      idade: Number(manualForm.idade) || 0,
-      cidade: manualForm.cidade || '',
-      curriculo: manualForm.curriculo || '',
-      pretensaoSalarial: Number(manualForm.pretensaoSalarial) || 0,
-      salarioAtual: Number(manualForm.salarioAtual) || 0,
-      status: (manualForm.status as CandidateStatus) || 'triagem',
-      observacoes: manualForm.observacoes || '',
+      nome: data.nome,
+      idade: Number(data.idade) || 0,
+      cidade: data.cidade,
+      curriculo: data.curriculo || '',
+      pretensaoSalarial: Number(data.pretensaoSalarial) || 0,
+      salarioAtual: Number(data.salarioAtual) || 0,
+      status: data.status as z.infer<typeof candidateStatusSchema>,
+      observacoes: data.observacoes || '',
       customFields: job.customFields.reduce((acc, cf) => {
-        acc[cf.id] = manualForm[cf.id];
+        acc[cf.id] = formValues[cf.id as keyof CandidateFormData];
         return acc;
       }, {} as Record<string, any>),
       createdAt: new Date(),
@@ -157,143 +182,226 @@ export function AddCandidatesPage({ store }: AddCandidatesPageProps) {
     };
     
     addCandidate(candidate);
-    setManualForm({ status: 'triagem' });
+    reset();
     setShowSuccessMessage(true);
     setTimeout(() => setShowSuccessMessage(false), 3000);
   };
   
-  const handleAddAnotherAndGoToDashboard = () => {
-    handleManualSubmit();
-    setTimeout(() => navigateTo('dashboard'), 500);
+  const handleAddAnotherAndGoToDashboard = async () => {
+    const isValid = await trigger();
+    if (isValid) {
+      handleSubmit(onSubmit)();
+      setTimeout(() => navigateTo('dashboard'), 500);
+    }
+  };
+
+  const getInputClassName = (hasError: boolean, isValid: boolean) => {
+    if (hasError) {
+      return 'border-rose-500 focus:border-rose-500 focus:ring-rose-200';
+    }
+    if (isValid) {
+      return 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-200';
+    }
+    return '';
   };
   
   const renderFieldInput = (field: CustomField & { isBasic?: boolean }) => {
-    const value = manualForm[field.id] ?? '';
+    const fieldError = errors[field.id as keyof CandidateFormData];
+    const fieldValue = formValues[field.id as keyof CandidateFormData];
+    const baseClassName = getInputClassName(!!fieldError, !!fieldValue && !fieldError);
     
     switch (field.type) {
       case 'text':
         return field.id === 'observacoes' ? (
-          <Textarea
-            value={value}
-            onChange={(e) => setManualForm({ ...manualForm, [field.id]: e.target.value })}
-            placeholder={`Digite ${field.name.toLowerCase()}`}
-            rows={3}
-          />
+          <div className="space-y-1">
+            <Textarea
+              placeholder={`Digite ${field.name.toLowerCase()}`}
+              rows={3}
+              className={baseClassName}
+              {...register(field.id as keyof CandidateFormData)}
+            />
+            {fieldError && (
+              <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                <span>{fieldError.message}</span>
+              </div>
+            )}
+          </div>
         ) : (
-          <Input
-            value={value}
-            onChange={(e) => setManualForm({ ...manualForm, [field.id]: e.target.value })}
-            placeholder={`Digite ${field.name.toLowerCase()}`}
-          />
+          <div className="space-y-1">
+            <Input
+              placeholder={`Digite ${field.name.toLowerCase()}`}
+              className={baseClassName}
+              {...register(field.id as keyof CandidateFormData)}
+            />
+            {fieldError && (
+              <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                <span>{fieldError.message}</span>
+              </div>
+            )}
+          </div>
         );
         
       case 'number':
         return (
-          <Input
-            type="number"
-            value={value}
-            onChange={(e) => setManualForm({ ...manualForm, [field.id]: e.target.value })}
-            placeholder="0"
-          />
+          <div className="space-y-1">
+            <Input
+              type="number"
+              placeholder="0"
+              className={baseClassName}
+              {...register(field.id as keyof CandidateFormData, { valueAsNumber: true })}
+            />
+            {fieldError && (
+              <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                <span>{fieldError.message}</span>
+              </div>
+            )}
+          </div>
         );
         
       case 'select':
         return (
-          <Select 
-            value={value} 
-            onValueChange={(v) => setManualForm({ ...manualForm, [field.id]: v })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione..." />
-            </SelectTrigger>
-            <SelectContent>
-              {field.id === 'status' ? (
-                Object.entries(STATUS_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
-                  </SelectItem>
-                ))
-              ) : (
-                field.options?.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))
+          <div className="space-y-1">
+            <Controller
+              name={field.id as keyof CandidateFormData}
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <Select value={value as string} onValueChange={onChange}>
+                  <SelectTrigger className={baseClassName}>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {field.id === 'status' ? (
+                      Object.entries(STATUS_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      field.options?.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               )}
-            </SelectContent>
-          </Select>
+            />
+            {fieldError && (
+              <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                <span>{fieldError.message}</span>
+              </div>
+            )}
+          </div>
         );
         
       case 'rating':
         return (
-          <div className="flex items-center gap-2">
-            {Array.from({ length: field.maxRating || 5 }, (_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setManualForm({ ...manualForm, [field.id]: i + 1 })}
-                className="p-1 hover:scale-110 transition-transform"
-              >
-                <Star
-                  className={`w-6 h-6 ${
-                    i < (value || 0)
-                      ? 'fill-amber-400 text-amber-400'
-                      : 'fill-gray-200 text-gray-200'
-                  }`}
-                />
-              </button>
-            ))}
-            <span className="text-sm text-slate-500 ml-2">
-              {value || 0}/{field.maxRating || 5}
-            </span>
+          <div className="space-y-1">
+            <Controller
+              name={field.id as keyof CandidateFormData}
+              control={control}
+              render={({ field: { onChange, value } }) => {
+                const numValue = typeof value === 'number' ? value : 0;
+                return (
+                  <div className="flex items-center gap-2">
+                    {Array.from({ length: field.maxRating || 5 }, (_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => onChange(i + 1)}
+                        className="p-1 hover:scale-110 transition-transform"
+                      >
+                        <Star
+                          className={`w-6 h-6 ${
+                            i < numValue
+                              ? 'fill-amber-400 text-amber-400'
+                              : 'fill-gray-200 text-gray-200'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                    <span className="text-sm text-slate-500 ml-2">
+                      {numValue}/{field.maxRating || 5}
+                    </span>
+                  </div>
+                );
+              }}
+            />
           </div>
         );
         
       case 'boolean':
         return (
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name={field.id}
-                checked={value === true || value === 'Sim'}
-                onChange={() => setManualForm({ ...manualForm, [field.id]: true })}
-                className="w-4 h-4 text-blue-600"
-              />
-              <span>Sim</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name={field.id}
-                checked={value === false || value === 'Não'}
-                onChange={() => setManualForm({ ...manualForm, [field.id]: false })}
-                className="w-4 h-4 text-blue-600"
-              />
-              <span>Não</span>
-            </label>
+          <div className="space-y-1">
+            <Controller
+              name={field.id as keyof CandidateFormData}
+              control={control}
+              render={({ field: { onChange, value } }) => {
+                const boolValue = typeof value === 'boolean' ? value : false;
+                return (
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name={field.id}
+                        checked={boolValue === true}
+                        onChange={() => onChange(true)}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span>Sim</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name={field.id}
+                        checked={boolValue === false}
+                        onChange={() => onChange(false)}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span>Não</span>
+                    </label>
+                  </div>
+                );
+              }}
+            />
           </div>
         );
         
       case 'link':
         return (
-          <Input
-            type="url"
-            value={value}
-            onChange={(e) => setManualForm({ ...manualForm, [field.id]: e.target.value })}
-            placeholder="https://..."
-          />
+          <div className="space-y-1">
+            <Input
+              type="url"
+              placeholder="https://..."
+              className={baseClassName}
+              {...register(field.id as keyof CandidateFormData)}
+            />
+            {fieldError && (
+              <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                <span>{fieldError.message}</span>
+              </div>
+            )}
+          </div>
         );
         
       default:
         return (
           <Input
-            value={value}
-            onChange={(e) => setManualForm({ ...manualForm, [field.id]: e.target.value })}
+            className={baseClassName}
+            {...register(field.id as keyof CandidateFormData)}
           />
         );
     }
   };
+
+  const isFormValid = formValues.nome && formValues.idade && formValues.cidade && 
+                      Object.keys(errors).length === 0;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -359,7 +467,7 @@ export function AddCandidatesPage({ store }: AddCandidatesPageProps) {
                   </Alert>
                 )}
                 
-                <div className="space-y-6">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                   {/* Campos Básicos */}
                   <div>
                     <div className="flex items-center gap-2 mb-4">
@@ -373,17 +481,113 @@ export function AddCandidatesPage({ store }: AddCandidatesPageProps) {
                     </InfoBox>
 
                     <div className="grid md:grid-cols-2 gap-4">
-                      {BASIC_FIELDS.map((field) => (
-                        <div key={field.id} className={`space-y-2 ${field.id === 'observacoes' ? 'md:col-span-2' : ''}`}>
-                          <Label htmlFor={field.id}>
-                            {field.name}
-                            {['nome', 'idade', 'cidade', 'status'].includes(field.id) && (
-                              <span className="text-red-500 ml-1">*</span>
+                      {BASIC_FIELDS.map((field) => {
+                        const isRequired = ['nome', 'idade', 'cidade', 'status'].includes(field.id);
+                        const fieldError = errors[field.id as keyof CandidateFormData];
+                        
+                        return (
+                          <div 
+                            key={field.id} 
+                            className={`space-y-2 ${field.id === 'observacoes' ? 'md:col-span-2' : ''}`}
+                          >
+                            <Label htmlFor={field.id}>
+                              {field.name}
+                              {isRequired && <span className="text-rose-500 ml-1">*</span>}
+                            </Label>
+                            {field.id === 'status' ? (
+                              <Controller
+                                name="status"
+                                control={control}
+                                render={({ field: { onChange, value } }) => (
+                                  <Select value={value} onValueChange={onChange}>
+                                    <SelectTrigger className={getInputClassName(!!fieldError, !!value)}>
+                                      <SelectValue placeholder="Selecione..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Object.entries(STATUS_LABELS).map(([key, label]) => (
+                                        <SelectItem key={key} value={key}>
+                                          {label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              />
+                            ) : field.id === 'observacoes' ? (
+                              <Textarea
+                                id={field.id}
+                                placeholder={`Digite ${field.name.toLowerCase()}`}
+                                rows={3}
+                                className={getInputClassName(!!fieldError, !!formValues[field.id as keyof CandidateFormData])}
+                                {...register(field.id as keyof CandidateFormData)}
+                              />
+                            ) : field.id === 'idade' ? (
+                              <div className="space-y-1">
+                                <Input
+                                  id={field.id}
+                                  type="number"
+                                  placeholder="0"
+                                  className={getInputClassName(!!fieldError, !!formValues[field.id as keyof CandidateFormData])}
+                                  {...register(field.id as keyof CandidateFormData, { valueAsNumber: true })}
+                                />
+                                {fieldError && (
+                                  <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                    <span>{fieldError.message}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : field.id === 'pretensaoSalarial' || field.id === 'salarioAtual' ? (
+                              <div className="space-y-1">
+                                <Input
+                                  id={field.id}
+                                  type="number"
+                                  placeholder="0"
+                                  className={getInputClassName(!!fieldError, !!formValues[field.id as keyof CandidateFormData])}
+                                  {...register(field.id as keyof CandidateFormData, { valueAsNumber: true })}
+                                />
+                                {fieldError && (
+                                  <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                    <span>{fieldError.message}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : field.id === 'curriculo' ? (
+                              <div className="space-y-1">
+                                <Input
+                                  id={field.id}
+                                  type="url"
+                                  placeholder="https://..."
+                                  className={getInputClassName(!!fieldError, !!formValues[field.id as keyof CandidateFormData])}
+                                  {...register(field.id as keyof CandidateFormData)}
+                                />
+                                {fieldError && (
+                                  <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                    <span>{fieldError.message}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                <Input
+                                  id={field.id}
+                                  placeholder={`Digite ${field.name.toLowerCase()}`}
+                                  className={getInputClassName(!!fieldError, !!formValues[field.id as keyof CandidateFormData])}
+                                  {...register(field.id as keyof CandidateFormData)}
+                                />
+                                {fieldError && (
+                                  <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                    <span>{fieldError.message}</span>
+                                  </div>
+                                )}
+                              </div>
                             )}
-                          </Label>
-                          {renderFieldInput(field)}
-                        </div>
-                      ))}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -416,24 +620,25 @@ export function AddCandidatesPage({ store }: AddCandidatesPageProps) {
                   {/* Ações */}
                   <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-slate-200">
                     <Button 
-                      onClick={handleManualSubmit}
+                      type="submit"
                       className="flex-1"
-                      disabled={!manualForm.nome || !manualForm.idade || !manualForm.cidade}
+                      disabled={!isFormValid || isSubmitting}
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Cadastrar e Adicionar Outro
                     </Button>
                     <Button 
+                      type="button"
                       variant="secondary"
                       onClick={handleAddAnotherAndGoToDashboard}
-                      disabled={!manualForm.nome || !manualForm.idade || !manualForm.cidade}
+                      disabled={!isFormValid || isSubmitting}
                       className="flex-1"
                     >
                       <Check className="w-4 h-4 mr-2" />
                       Cadastrar e Ver Dashboard
                     </Button>
                   </div>
-                </div>
+                </form>
               </CardContent>
             </Card>
           </TabsContent>
