@@ -150,6 +150,26 @@ export function LoginPage({ store }: LoginPageProps) {
               </Alert>
             )}
             
+            {/* Google Login - Primeiro */}
+            <GoogleLoginButton
+              onSuccess={(token, user) => {
+                // TODO: Implementar integração com backend
+                console.log('Google login success:', token, user);
+                login(user.email, 'google-oauth');
+              }}
+              onError={(error) => {
+                setLoginError('Erro ao fazer login com Google: ' + error.message);
+              }}
+            />
+            
+            <div className="relative my-4">
+              <Separator />
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-xs text-slate-400">
+                ou
+              </span>
+            </div>
+            
+            {/* Email/Password Form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">E-mail</label>
@@ -237,19 +257,6 @@ export function LoginPage({ store }: LoginPageProps) {
                 )}
               </Button>
             </form>
-            
-            <Separator className="my-4" />
-            
-            <GoogleLoginButton
-              onSuccess={(token, user) => {
-                // TODO: Implementar integração com backend
-                console.log('Google login success:', token, user);
-                login(user.email, 'google-oauth');
-              }}
-              onError={(error) => {
-                setLoginError('Erro ao fazer login com Google: ' + error.message);
-              }}
-            />
             
             <Button
               variant="outline"
