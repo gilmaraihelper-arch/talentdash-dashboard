@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
+import { GoogleLoginButton } from '@/components/GoogleLoginButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -239,9 +240,20 @@ export function LoginPage({ store }: LoginPageProps) {
             
             <Separator className="my-4" />
             
+            <GoogleLoginButton
+              onSuccess={(token, user) => {
+                // TODO: Implementar integração com backend
+                console.log('Google login success:', token, user);
+                login(user.email, 'google-oauth');
+              }}
+              onError={(error) => {
+                setLoginError('Erro ao fazer login com Google: ' + error.message);
+              }}
+            />
+            
             <Button
               variant="outline"
-              className="w-full h-11"
+              className="w-full h-11 mt-3"
               onClick={handleDemoLogin}
               disabled={isLoading || isSubmitting}
             >
