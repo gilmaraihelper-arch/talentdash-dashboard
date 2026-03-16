@@ -101,8 +101,8 @@ async function mockApiRequest<T>(
       name,
       companyName: companyName || '',
       plan: plan || 'free',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
     
     const token = generateId();
@@ -145,8 +145,8 @@ async function mockApiRequest<T>(
       id: generateId(),
       ...body,
       userId: db.users[0]?.id || '1',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
     db.jobs.push(job);
     saveMockDB(db);
@@ -175,8 +175,8 @@ async function mockApiRequest<T>(
       ...c,
       id: generateId(),
       jobId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }));
     
     db.candidates.push(...newCandidates);
