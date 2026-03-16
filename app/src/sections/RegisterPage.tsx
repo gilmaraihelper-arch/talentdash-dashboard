@@ -238,7 +238,7 @@ export function RegisterPage({ store }: RegisterPageProps) {
             
             {/* Google Login - Primeiro */}
             <GoogleLoginButton
-              onSuccess={(token, user) => {
+              onSuccess={(_token, user) => {
                 // Login direto com Google - não precisa criar senha
                 login(user.email, 'google-oauth');
               }}
