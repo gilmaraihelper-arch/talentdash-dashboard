@@ -94,6 +94,7 @@ export function DashboardPage({ store }: DashboardPageProps) {
 
   // Tema de cores
   const [colorTheme, setColorTheme] = useState<ColorTheme>(job?.colorTheme || 'orange');
+  const [themeSelectorOpen, setThemeSelectorOpen] = useState(false);
 
   // Estados
   const [isEditing, setIsEditing] = useState(false);
@@ -389,12 +390,45 @@ export function DashboardPage({ store }: DashboardPageProps) {
 
   const theme = COLOR_THEMES[colorTheme];
 
+  // Função de navegação da sidebar
+  const handleSidebarNavigate = useCallback((item: string) => {
+    switch (item) {
+      case 'dashboard':
+        // Já está no dashboard
+        break;
+      case 'candidates':
+        // Scroll para a seção de candidatos
+        const candidatesSection = document.getElementById('candidates-section');
+        if (candidatesSection) {
+          candidatesSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        break;
+      case 'jobs':
+        navigateTo('landing');
+        break;
+      case 'analytics':
+        // Scroll para a seção de gráficos
+        const chartsSection = document.getElementById('charts-section');
+        if (chartsSection) {
+          chartsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        break;
+      case 'settings':
+        // Abrir configurações do tema
+        setThemeSelectorOpen(true);
+        break;
+      default:
+        break;
+    }
+    setMobileMenuOpen(false);
+  }, [navigateTo]);
+
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-[#F8F9FA]">
         {/* Sidebar Desktop */}
         <div className="hidden lg:block">
-          <Sidebar activeItem="dashboard" />
+          <Sidebar activeItem="dashboard" onNavigate={handleSidebarNavigate} />
         </div>
 
         {/* Mobile Menu */}
@@ -404,7 +438,7 @@ export function DashboardPage({ store }: DashboardPageProps) {
           direction="left"
         >
           <DrawerContent className="p-0 w-64" data-vaul-drawer-direction="left">
-            <Sidebar activeItem="dashboard" />
+            <Sidebar activeItem="dashboard" onNavigate={handleSidebarNavigate} />
           </DrawerContent>
         </Drawer>
 
@@ -647,7 +681,7 @@ export function DashboardPage({ store }: DashboardPageProps) {
                 </div>
 
                 {/* Charts Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div id="charts-section" className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   <HorizontalBarChart
                     title="Por Cidade"
                     data={cityData}
@@ -666,7 +700,7 @@ export function DashboardPage({ store }: DashboardPageProps) {
                 </div>
 
                 {/* Ranking + Lista de Candidatos */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div id="candidates-section" className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   {/* Lista de Candidatos */}
                   <div className="lg:col-span-2">
                     <Card className="border-0 shadow-sm">
