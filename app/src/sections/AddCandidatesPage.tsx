@@ -349,7 +349,7 @@ export function AddCandidatesPage({ store }: AddCandidatesPageProps) {
                       <input
                         type="radio"
                         name={field.id}
-                        checked={boolValue === true}
+                        checked={boolValue}
                         onChange={() => onChange(true)}
                         className="w-4 h-4 text-blue-600"
                       />
@@ -359,7 +359,7 @@ export function AddCandidatesPage({ store }: AddCandidatesPageProps) {
                       <input
                         type="radio"
                         name={field.id}
-                        checked={boolValue === false}
+                        checked={!boolValue}
                         onChange={() => onChange(false)}
                         className="w-4 h-4 text-blue-600"
                       />

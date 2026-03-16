@@ -16,12 +16,13 @@ const testJob: Job = {
   id: 'test-1',
   name: 'Desenvolvedor Sênior - São Paulo',
   description: 'Vaga para desenvolvedor com experiência em ção',
-  status: 'active',
+  plan: 'pro',
+  dashboardModel: 'padrao',
+  colorTheme: 'blue',
   createdAt: new Date(),
-  updatedAt: new Date(),
   customFields: [
-    { id: '1', name: 'Nível de Inglês', type: 'select', options: ['Básico', 'Intermediário', 'Avançado'], visibility: { table: true, detail: true } },
-    { id: '2', name: 'Pretensão Salarial', type: 'number', visibility: { table: true, detail: true } },
+    { id: '1', name: 'Nível de Inglês', type: 'select', icon: 'Star', options: ['Básico', 'Intermediário', 'Avançado'], visibility: { card: true, table: true, detail: true } },
+    { id: '2', name: 'Pretensão Salarial', type: 'number', icon: 'Hash', visibility: { card: true, table: true, detail: true } },
   ],
 };
 
