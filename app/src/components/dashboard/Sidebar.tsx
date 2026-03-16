@@ -19,10 +19,11 @@ export function Sidebar({ activeItem = 'dashboard', onNavigate }: SidebarProps) 
     <aside className="w-16 lg:w-60 h-screen bg-white border-r border-slate-200 flex flex-col shrink-0 transition-all duration-300">
       {/* Logo */}
       <div className="h-16 flex items-center justify-center lg:justify-start lg:px-6 border-b border-slate-100">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF6B35] to-[#F7931E] flex items-center justify-center text-white font-bold text-sm">
-          TD
-        </div>
-        <span className="hidden lg:block ml-3 font-bold text-slate-900">taldash</span>
+        <img 
+          src="/logo.png" 
+          alt="taldash" 
+          className="h-8 w-auto object-contain"
+        />
       </div>
 
       {/* Navigation */}
