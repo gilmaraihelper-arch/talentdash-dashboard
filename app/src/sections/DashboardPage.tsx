@@ -180,7 +180,7 @@ export function DashboardPage({ store }: DashboardPageProps) {
       total > 0
         ? Math.round(
             jobCandidates.reduce((sum, c) => {
-              const expField = job?.customFields.find((f) =
+              const expField = job?.customFields.find((f) =>
                 f.name.toLowerCase().includes('experiência') ||
                 f.name.toLowerCase().includes('experiencia')
               );
@@ -196,7 +196,7 @@ export function DashboardPage({ store }: DashboardPageProps) {
 
     // Contar candidatos com inglês
     const withEnglish = jobCandidates.filter((c) => {
-      const field = job?.customFields.find((f) =
+      const field = job?.customFields.find((f) =>
         f.name.toLowerCase().includes('inglês') ||
         f.name.toLowerCase().includes('ingles')
       );
@@ -662,7 +662,7 @@ export function DashboardPage({ store }: DashboardPageProps) {
                   <VerticalBarChart
                     title="Distribuição Salarial"
                     data={salaryDistribution}
-                  /
+                  />
                 </div>
 
                 {/* Ranking + Lista de Candidatos */}

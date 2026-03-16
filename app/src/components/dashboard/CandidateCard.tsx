@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { SkillBadge } from './SkillBadge';
-import { Candidate, CandidateStatus, Job } from '@/types';
+import type { Candidate, CandidateStatus, Job } from '@/types';
 import { STATUS_COLORS, STATUS_LABELS } from '@/types';
 
 interface CandidateCardProps {
