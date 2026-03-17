@@ -71,7 +71,38 @@ export function useStore() {
   // Navegação
   const navigateTo = useCallback((view: ViewType) => {
     setState(prev => ({ ...prev, currentView: view }));
+    // Atualiza o URL hash para permitir navegação com back button
+    window.history.pushState({ view }, '', `#${view}`);
   }, []);
+
+  // Handle browser back button
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      // Se usuário está logado e tenta voltar para landing/login/register,
+      // redireciona para o dashboard
+      if (state.isAuthenticated) {
+        const currentView = state.currentView;
+        const isAuthPage = ['landing', 'login', 'register'].includes(currentView);
+        
+        if (isAuthPage) {
+          // Previne navegação para páginas de auth quando logado
+          event.preventDefault();
+          navigateTo('user-dashboard');
+        } else {
+          // Permite navegação normal entre views autenticadas
+          const newView = (event.state?.view as ViewType) || 'user-dashboard';
+          setState(prev => ({ ...prev, currentView: newView }));
+        }
+      } else {
+        // Usuário não logado - permite navegação normal
+        const newView = (event.state?.view as ViewType) || 'landing';
+        setState(prev => ({ ...prev, currentView: newView }));
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [state.isAuthenticated, state.currentView]);
 
   // ============ AUTENTICAÇÃO ============
   
@@ -112,8 +143,11 @@ export function useStore() {
     try {
       setIsLoading(true);
       setError(null);
+      
+      // Chama a API de registro - pode lançar erro se email já existe
       const { user } = await authAPI.register(data);
       
+      // Atualiza estado e redireciona para dashboard
       setState(prev => ({
         ...prev,
         user,
@@ -121,9 +155,13 @@ export function useStore() {
         currentView: 'user-dashboard',
       }));
       
+      // Carrega jobs do usuário
+      await loadJobs();
+      
       return user;
     } catch (err: any) {
       setError(err.message || 'Erro ao criar conta');
+      // Re-lança o erro para o componente poder mostrar mensagem
       throw err;
     } finally {
       setIsLoading(false);

@@ -29,6 +29,8 @@ import {
   ChevronDown,
   Menu,
   X,
+  Sparkles,
+  Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -92,6 +94,9 @@ export function DashboardPage({ store }: DashboardPageProps) {
   const { navigateTo, state, selectCandidate, deleteCandidate, getJobCandidates } = store;
   const job = state.selectedJob;
 
+  // Verificar se é um job de demo
+  const isDemoJob = job?.id?.startsWith('demo-') || job?.id?.startsWith('demo') || false;
+  
   // Tema de cores
   const [colorTheme, setColorTheme] = useState<ColorTheme>(job?.colorTheme || 'orange');
   const [themeSelectorOpen, setThemeSelectorOpen] = useState(false);
@@ -595,6 +600,24 @@ export function DashboardPage({ store }: DashboardPageProps) {
               </div>
             </div>
           </header>
+
+          {/* Demo Banner */}
+          {isDemoJob && (
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 flex items-center justify-center gap-2 text-sm">
+              <Sparkles className="w-4 h-4" />
+              <span className="font-medium">Modo Demonstração</span>
+              <span className="hidden sm:inline">•</span>
+              <span className="hidden sm:inline">Estes são dados de exemplo para você explorar</span>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="ml-2 h-7 bg-white/20 text-white hover:bg-white/30 border-0"
+                onClick={() => navigateTo('create-job')}
+              >
+                Criar Meu Primeiro Mapeamento
+              </Button>
+            </div>
+          )}
 
           {/* Dashboard Content */}
           <div className="flex-1 overflow-auto p-4 lg:p-6">

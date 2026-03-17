@@ -87,20 +87,19 @@ export function RegisterPage({ store }: RegisterPageProps) {
     setIsLoading(true);
     
     try {
-      // Simulação de chamada API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      register({
+      // Chama o register do store - ele já redireciona em caso de sucesso
+      await register({
         name: data.name,
         email: data.email,
         password: data.password,
         companyName: data.companyName,
         plan: selectedPlan,
       });
+      // Se chegou aqui, o cadastro foi bem-sucedido e o usuário foi redirecionado
     } catch (error: any) {
-      const errorMessage = error?.message || '';
+      const errorMessage = error?.message || error?.toString() || '';
       
-      if (errorMessage.includes('já cadastrado') || errorMessage.includes('already exists')) {
+      if (errorMessage.includes('já cadastrado') || errorMessage.includes('already exists') || errorMessage.includes('E-mail já cadastrado')) {
         setRegisterError('Este e-mail já está cadastrado. Clique em "Entrar" abaixo para fazer login.');
       } else {
         setRegisterError('Erro ao criar conta. Tente novamente.');
