@@ -152,15 +152,18 @@ export function LoginPage({ store }: LoginPageProps) {
             
             {/* Google Login - Primeiro */}
             <GoogleLoginButton
-              onSuccess={(token, user) => {
-                // Login com Google OAuth
-                googleLogin({
-                  email: user.email,
-                  name: user.name,
-                  picture: user.picture,
-                }).catch((error) => {
+              onSuccess={async (_token, user) => {
+                try {
+                  // Login com Google OAuth - aguarda conclusão
+                  await googleLogin({
+                    email: user.email,
+                    name: user.name,
+                    picture: user.picture,
+                  });
+                  // Navegação já é tratada dentro de googleLogin (currentView: 'user-dashboard')
+                } catch (error: any) {
                   setLoginError('Erro ao fazer login com Google: ' + error.message);
-                });
+                }
               }}
               onError={(error) => {
                 setLoginError('Erro ao fazer login com Google: ' + error.message);

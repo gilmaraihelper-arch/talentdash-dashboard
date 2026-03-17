@@ -185,7 +185,7 @@ export function useStore() {
         email: googleUser.email,
         name: googleUser.name,
         avatar: googleUser.picture,
-        plan: 'PRO', // Usuários Google começam com PRO
+        plan: 'pro', // Usuários Google começam com PRO
         role: googleUser.email === 'gilmar.aihelper@gmail.com' ? 'ADMIN' : 'USER',
         paymentMethods: [],
         createdAt: new Date(),

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 
 // Configuração do Google OAuth
@@ -10,6 +10,8 @@ interface GoogleLoginButtonProps {
 }
 
 export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps) {
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+
   useEffect(() => {
     // Carregar script do Google
     if (!document.getElementById('google-script')) {
@@ -18,18 +20,30 @@ export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
       script.defer = true;
+      script.onload = () => setIsScriptLoaded(true);
       document.body.appendChild(script);
+    } else {
+      // Script already loaded
+      setIsScriptLoaded(true);
     }
   }, []);
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = useCallback(() => {
     if (!GOOGLE_CLIENT_ID) {
       console.error('Google Client ID não configurado');
+      onError?.(new Error('Google Client ID não configurado'));
+      return;
+    }
+
+    // Esperar o script carregar
+    if (!window.google || !isScriptLoaded) {
+      console.error('Google script não carregado');
+      onError?.(new Error('Google script não carregado'));
       return;
     }
 
     // Inicializar Google OAuth
-    if (window.google) {
+    try {
       window.google.accounts.oauth2
         .initTokenClient({
           client_id: GOOGLE_CLIENT_ID,
@@ -53,8 +67,11 @@ export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps
           },
         })
         .requestAccessToken();
+    } catch (err) {
+      console.error('Erro ao iniciar Google OAuth:', err);
+      onError?.(err as Error);
     }
-  };
+  }, [onSuccess, onError, isScriptLoaded]);
 
   return (
     <Button
