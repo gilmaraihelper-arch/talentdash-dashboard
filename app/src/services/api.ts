@@ -92,8 +92,9 @@ async function apiRequest<T>(
     
     return data;
   } catch (error) {
-    // Se for erro de rede (backend offline), usar mock/localStorage
-    if (error instanceof TypeError && error.message.includes('fetch')) {
+    // Se for erro de rede (backend offline) ou CORS, usar mock/localStorage
+    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('CORS') || error.message.includes('Failed to fetch'))) {
+      console.warn('API não disponível (CORS/offline), usando dados mock:', endpoint);
       return mockApiRequest<T>(endpoint, options);
     }
     // Se for erro de API, propagar
