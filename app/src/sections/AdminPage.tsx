@@ -48,7 +48,7 @@ const mockUsers: User[] = [
     email: 'user2@example.com',
     name: 'Maria Santos',
     companyName: 'HR Solutions',
-    plan: 'basic',
+    plan: 'advanced',
     role: 'USER',
     paymentMethods: [],
     createdAt: new Date('2024-03-15'),
@@ -71,17 +71,17 @@ interface AdminPageProps {
 }
 
 const planColors: Record<PlanType, string> = {
-  FREE: 'bg-slate-100 text-slate-700',
-  BASIC: 'bg-blue-100 text-blue-700',
-  PRO: 'bg-violet-100 text-violet-700',
-  ENTERPRISE: 'bg-amber-100 text-amber-700',
+  free: 'bg-slate-100 text-slate-700',
+  advanced: 'bg-blue-100 text-blue-700',
+  pro: 'bg-violet-100 text-violet-700',
+  enterprise: 'bg-amber-100 text-amber-700',
 };
 
 const planLabels: Record<PlanType, string> = {
-  FREE: 'Free',
-  BASIC: 'Basic',
-  PRO: 'Pro',
-  ENTERPRISE: 'Enterprise',
+  free: 'Free',
+  advanced: 'Advanced',
+  pro: 'Pro',
+  enterprise: 'Enterprise',
 };
 
 export function AdminPage({ onBack }: AdminPageProps) {
@@ -122,8 +122,8 @@ export function AdminPage({ onBack }: AdminPageProps) {
   const stats = {
     totalUsers: users.length,
     admins: users.filter(u => u.role === 'ADMIN').length,
-    proUsers: users.filter(u => u.plan === 'PRO' || u.plan === 'ENTERPRISE').length,
-    freeUsers: users.filter(u => u.plan === 'FREE').length,
+    proUsers: users.filter(u => u.plan === 'pro' || u.plan === 'enterprise').length,
+    freeUsers: users.filter(u => u.plan === 'free').length,
   };
 
   return (

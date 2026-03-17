@@ -137,6 +137,7 @@ async function mockApiRequest<T>(
       name,
       companyName: companyName || '',
       plan: plan || 'free',
+      role: 'USER',
       createdAt: new Date(),
       updatedAt: new Date(),
       paymentMethods: [],
@@ -156,6 +157,53 @@ async function mockApiRequest<T>(
     
     if (!user) {
       throw new Error('E-mail ou senha incorretos');
+    }
+    
+    const token = generateId();
+    setAuthToken(token);
+    
+    const { password: _, ...userWithoutPassword } = user as any;
+    return { user: userWithoutPassword, token } as T;
+  }
+  
+  // GOOGLE LOGIN - Mock endpoint
+  if (endpoint === '/auth/google' && method === 'POST') {
+    const { accessToken } = body;
+    
+    // Em modo mock, validamos o accessToken e criamos/login usuário
+    // O accessToken do Google tem formato específico, mas em mock aceitamos qualquer um
+    if (!accessToken) {
+      throw new Error('Token do Google não fornecido');
+    }
+    
+    // Extrair info do token JWT (simulado) ou usar defaults
+    // Em produção real, validaríamos o token com Google
+    const email = `google_user_${generateId().slice(0, 8)}@gmail.com`;
+    const name = 'Usuário Google';
+    
+    // Verificar se usuário já existe (por email simulado ou criar novo)
+    const existingUser = db.users.find(u => u.email === email);
+    
+    let user: User;
+    
+    if (!existingUser) {
+      // Criar novo usuário automaticamente
+      user = {
+        id: generateId(),
+        email,
+        name,
+        companyName: '',
+        plan: 'free',
+        role: 'USER',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        paymentMethods: [],
+        googleId: accessToken.slice(-20), // Simular ID do Google
+      } as User;
+      db.users.push(user);
+      saveMockDB(db);
+    } else {
+      user = existingUser;
     }
     
     const token = generateId();

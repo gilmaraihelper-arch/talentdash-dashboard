@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { PageLoader } from '@/components/PageLoader';
 import './App.css';
@@ -31,35 +31,7 @@ const AdminPage = lazy(() => import(/* webpackChunkName: "dashboard" */ '@/secti
 
 function App() {
   const store = useStore();
-  const { state, googleLogin } = store;
-
-  // Verificar OAuth token na URL (callback do Google)
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token')) {
-      // Parse do token
-      const params = new URLSearchParams(hash.substring(1));
-      const accessToken = params.get('access_token');
-      
-      if (accessToken) {
-        // Buscar informações do usuário
-        fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        })
-          .then(res => res.json())
-          .then(userInfo => {
-            googleLogin({
-              email: userInfo.email,
-              name: userInfo.name,
-              picture: userInfo.picture,
-            });
-            // Limpar URL
-            window.location.hash = '';
-          })
-          .catch(console.error);
-      }
-    }
-  }, [googleLogin]);
+  const { state } = store;
 
   // Renderiza a tela atual baseada no estado de navegação
   // Com Suspense para mostrar loading enquanto os chunks carregam
