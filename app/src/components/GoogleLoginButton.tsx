@@ -42,36 +42,18 @@ export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps
       return;
     }
 
-    // Inicializar Google OAuth
-    try {
-      window.google.accounts.oauth2
-        .initTokenClient({
-          client_id: GOOGLE_CLIENT_ID,
-          scope: 'email profile',
-          callback: (response: any) => {
-            if (response.error) {
-              onError?.(new Error(response.error));
-              return;
-            }
-            
-            // Decodificar token JWT básico
-            const token = response.access_token;
-            fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-              headers: { Authorization: `Bearer ${token}` }
-            })
-              .then(res => res.json())
-              .then(userInfo => {
-                onSuccess(token, userInfo);
-              })
-              .catch(err => onError?.(err));
-          },
-        })
-        .requestAccessToken();
-    } catch (err) {
-      console.error('Erro ao iniciar Google OAuth:', err);
-      onError?.(err as Error);
-    }
-  }, [onSuccess, onError, isScriptLoaded]);
+    // Usar redirect em vez de popup para evitar problemas de callback
+    const targetUrl = encodeURIComponent(window.location.origin + '/auth/callback');
+    
+    // Redirecionar para OAuth
+    window.location.href = 
+      `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${GOOGLE_CLIENT_ID}&` +
+      `response_type=token&` +
+      `redirect_uri=${targetUrl}&` +
+      `scope=email profile&` +
+      `state=${Date.now()}`;
+  }, [isScriptLoaded, onError]);
 
   return (
     <Button
