@@ -429,7 +429,7 @@ export function DashboardPage({ store }: DashboardPageProps) {
       <div className="flex h-screen bg-[#F8F9FA]">
         {/* Sidebar Desktop */}
         <div className="hidden lg:block">
-          <Sidebar activeItem="dashboard" onNavigate={handleSidebarNavigate} />
+          <Sidebar activeItem="dashboard" onNavigate={handleSidebarNavigate} user={state.user} />
         </div>
 
         {/* Mobile Menu */}
@@ -439,7 +439,7 @@ export function DashboardPage({ store }: DashboardPageProps) {
           direction="left"
         >
           <DrawerContent className="p-0 w-64" data-vaul-drawer-direction="left">
-            <Sidebar activeItem="dashboard" onNavigate={handleSidebarNavigate} />
+            <Sidebar activeItem="dashboard" onNavigate={handleSidebarNavigate} user={state.user} />
           </DrawerContent>
         </Drawer>
 
