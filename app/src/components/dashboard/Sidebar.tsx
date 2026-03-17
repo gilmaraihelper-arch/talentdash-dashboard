@@ -22,7 +22,7 @@ export function Sidebar({ activeItem = 'dashboard', onNavigate }: SidebarProps) 
         <img 
           src="/logo.jpg" 
           alt="taldash" 
-          className="h-12 w-auto object-contain"
+          className="h-16 w-auto object-contain"
         />
       </div>
 

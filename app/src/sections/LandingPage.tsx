@@ -470,7 +470,7 @@ export function LandingPage({ store }: LandingPageProps) {
         <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <img src="/logo.jpg" alt="taldash" className="h-16 w-auto object-contain" />
+              <img src="/logo.jpg" alt="taldash" className="h-20 w-auto object-contain" />
             </div>
             
             <nav className="hidden lg:flex items-center gap-1">
@@ -863,7 +863,7 @@ export function LandingPage({ store }: LandingPageProps) {
         <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <img src="/logo.jpg" alt="taldash" className="h-12 w-auto object-contain" />
+              <img src="/logo.jpg" alt="taldash" className="h-16 w-auto object-contain" />
             </div>
             <p className="text-sm">© 2024 taldash. Todos os direitos reservados.</p>
           </div>
