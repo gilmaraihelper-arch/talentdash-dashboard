@@ -29,10 +29,10 @@ export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps
   }, []);
 
   const handleGoogleLogin = useCallback(() => {
-    console.log('🟢 Google Login clicked');
-    console.log('🟢 Client ID:', GOOGLE_CLIENT_ID ? 'configured' : 'MISSING');
-    console.log('🟢 Script loaded:', isScriptLoaded);
-    console.log('🟢 window.google:', typeof window.google);
+    console.log('[Google] Login clicked v2');
+    console.log('[Google] Client ID:', GOOGLE_CLIENT_ID ? 'OK' : 'MISSING');
+    console.log('[Google] Script loaded:', isScriptLoaded);
+    console.log('[Google] window.google exists:', !!window.google);
     
     if (!GOOGLE_CLIENT_ID) {
       console.error('❌ Google Client ID não configurado');
