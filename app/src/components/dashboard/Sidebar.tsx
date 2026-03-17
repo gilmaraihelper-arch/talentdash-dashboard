@@ -20,7 +20,7 @@ export function Sidebar({ activeItem = 'dashboard', onNavigate }: SidebarProps) 
       {/* Logo */}
       <div className="h-16 flex items-center justify-center lg:justify-start lg:px-6 border-b border-slate-100">
         <img 
-          src="/logo.png" 
+          src="/logo.jpg" 
           alt="taldash" 
           className="h-8 w-auto object-contain"
         />
