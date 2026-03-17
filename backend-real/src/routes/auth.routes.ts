@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authController } from '../controllers/index.js';
-import { googleAuthController } from '../controllers/google-auth.controller.js';
+import googleAuthController from '../controllers/google-auth.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 import { registerSchema, loginSchema } from '../utils/validation.js';

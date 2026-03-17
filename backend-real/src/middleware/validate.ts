@@ -1,6 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
 import { errorResponse } from '../utils/response.js';
+import { ParamsDictionary } from 'express-serve-static-core';
+import { ParsedQs } from 'qs';
+
+interface ValidatedData {
+  body?: unknown;
+  query?: unknown;
+  params?: unknown;
+}
 
 // Factory de middleware de validação
 export function validate(schema: ZodSchema) {
@@ -10,17 +18,17 @@ export function validate(schema: ZodSchema) {
         body: req.body,
         query: req.query,
         params: req.params,
-      });
+      }) as ValidatedData;
 
       // Substituir os dados validados no request
       req.body = validated.body ?? req.body;
-      req.query = validated.query ?? req.query;
-      req.params = validated.params ?? req.params;
+      req.query = (validated.query ?? req.query) as ParsedQs;
+      req.params = (validated.params ?? req.params) as ParamsDictionary;
 
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const messages = error.errors.map((err) => `${err.path.join('.')}: ${err.message}`);
+        const messages = error.issues.map((err) => `${err.path.join('.')}: ${err.message}`);
         errorResponse(res, `Erro de validação: ${messages.join(', ')}`, 400);
         return;
       }
@@ -37,7 +45,7 @@ export function validateBody(schema: ZodSchema) {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const messages = error.errors.map((err) => `${err.path.join('.')}: ${err.message}`);
+        const messages = error.issues.map((err) => `${err.path.join('.')}: ${err.message}`);
         errorResponse(res, `Erro de validação: ${messages.join(', ')}`, 400);
         return;
       }
@@ -50,11 +58,11 @@ export function validateBody(schema: ZodSchema) {
 export function validateQuery(schema: ZodSchema) {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
-      req.query = schema.parse(req.query);
+      req.query = schema.parse(req.query) as ParsedQs;
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const messages = error.errors.map((err) => `${err.path.join('.')}: ${err.message}`);
+        const messages = error.issues.map((err) => `${err.path.join('.')}: ${err.message}`);
         errorResponse(res, `Erro de validação: ${messages.join(', ')}`, 400);
         return;
       }
@@ -67,11 +75,11 @@ export function validateQuery(schema: ZodSchema) {
 export function validateParams(schema: ZodSchema) {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
-      req.params = schema.parse(req.params);
+      req.params = schema.parse(req.params) as ParamsDictionary;
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const messages = error.errors.map((err) => `${err.path.join('.')}: ${err.message}`);
+        const messages = error.issues.map((err) => `${err.path.join('.')}: ${err.message}`);
         errorResponse(res, `Erro de validação: ${messages.join(', ')}`, 400);
         return;
       }

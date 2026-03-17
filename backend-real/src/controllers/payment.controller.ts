@@ -15,6 +15,11 @@ import {
   notFoundResponse,
 } from '../utils/response.js';
 
+// Helper to ensure string type from params
+function getParam(param: string | string[] | undefined): string {
+  return Array.isArray(param) ? param[0] : param || '';
+}
+
 // Criar método de pagamento
 export async function create(req: Request, res: Response): Promise<void> {
   try {
@@ -56,7 +61,7 @@ export async function getById(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { id } = req.params;
+    const id = getParam(req.params.id);
     const paymentMethod = await getPaymentMethodById(id, user.id);
     successResponse(res, paymentMethod);
   } catch (error) {
@@ -77,7 +82,7 @@ export async function update(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { id } = req.params;
+    const id = getParam(req.params.id);
     const paymentMethod = await updatePaymentMethod(id, user.id, req.body);
     successResponse(res, paymentMethod);
   } catch (error) {
@@ -98,7 +103,7 @@ export async function remove(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { id } = req.params;
+    const id = getParam(req.params.id);
     await deletePaymentMethod(id, user.id);
     successResponse(res, { message: 'Método de pagamento deletado com sucesso' });
   } catch (error) {
@@ -119,7 +124,7 @@ export async function setDefault(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { id } = req.params;
+    const id = getParam(req.params.id);
     const paymentMethod = await setDefaultPaymentMethod(id, user.id);
     successResponse(res, paymentMethod);
   } catch (error) {

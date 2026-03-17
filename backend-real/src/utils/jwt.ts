@@ -5,7 +5,7 @@ import { JWTPayload } from '../types/index.js';
 // Gerar token JWT
 export function generateToken(payload: JWTPayload): string {
   return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn,
+    expiresIn: config.jwtExpiresIn as jwt.SignOptions['expiresIn'],
   });
 }
 

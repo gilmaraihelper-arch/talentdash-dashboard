@@ -35,11 +35,11 @@ export async function createCandidate(
       telefone: input.telefone,
       linkedin: input.linkedin,
       portfolio: input.portfolio,
-      experiencia: input.experiencia || [],
-      formacao: input.formacao || [],
+      experiencia: input.experiencia as any || [],
+      formacao: input.formacao as any || [],
       habilidades: input.habilidades || [],
       pretensaoSalarial: input.pretensaoSalarial,
-      customData: input.customData || {},
+      customData: input.customData as any || {},
       status: 'NEW',
     },
   });
@@ -171,11 +171,11 @@ export async function updateCandidate(
       telefone: input.telefone,
       linkedin: input.linkedin,
       portfolio: input.portfolio,
-      experiencia: input.experiencia,
-      formacao: input.formacao,
+      experiencia: input.experiencia as any,
+      formacao: input.formacao as any,
       habilidades: input.habilidades,
       pretensaoSalarial: input.pretensaoSalarial,
-      customData: input.customData,
+      customData: input.customData as any,
     },
   });
 }
@@ -259,7 +259,7 @@ export async function addCandidateAnalysis(
     data: {
       iaSummary: analysis.summary,
       iaScore: analysis.score,
-      iaAnalysis: analysis.details,
+      iaAnalysis: analysis.details as any,
       analyzedAt: new Date(),
       status: 'REVIEW',
     },

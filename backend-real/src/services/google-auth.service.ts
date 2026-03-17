@@ -11,7 +11,7 @@ const googleUserSchema = z.object({
 
 // Interface para o usuário do Google
 interface GoogleUserInfo {
-  id: string;
+  sub: string;
   email: string;
   name: string;
   picture?: string;
@@ -31,14 +31,9 @@ async function verifyGoogleToken(accessToken: string): Promise<GoogleUserInfo> {
     throw new Error('Token do Google inválido ou expirado');
   }
 
-  const userInfo = await response.json();
+  const userInfo = await response.json() as GoogleUserInfo;
   
-  return {
-    id: userInfo.sub,
-    email: userInfo.email,
-    name: userInfo.name,
-    picture: userInfo.picture,
-  };
+  return userInfo;
 }
 
 /**
@@ -53,7 +48,8 @@ export async function googleLogin(googleAccessToken: string) {
   // Validar input
   const parsed = googleUserSchema.safeParse({ googleAccessToken });
   if (!parsed.success) {
-    throw new Error(parsed.error.errors[0].message);
+    const firstError = parsed.error.issues[0];
+    throw new Error(firstError?.message || 'Erro de validação');
   }
 
   // Verificar token com o Google
@@ -70,20 +66,10 @@ export async function googleLogin(googleAccessToken: string) {
       data: {
         email: googleUser.email,
         name: googleUser.name,
-        avatar: googleUser.picture,
         password: '', // Usuários OAuth não têm senha
-        role: 'USER',
         plan: 'PRO', // Usuários Google começam com PRO
       },
     });
-  } else {
-    // Atualizar avatar se mudou
-    if (googleUser.picture && user.avatar !== googleUser.picture) {
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: { avatar: googleUser.picture },
-      });
-    }
   }
 
   // Gerar JWT do TalentDash
@@ -91,10 +77,9 @@ export async function googleLogin(googleAccessToken: string) {
     {
       userId: user.id,
       email: user.email,
-      role: user.role,
     },
     config.jwtSecret,
-    { expiresIn: config.jwtExpiresIn }
+    { expiresIn: config.jwtExpiresIn as jwt.SignOptions['expiresIn'] }
   );
 
   return {
@@ -103,8 +88,6 @@ export async function googleLogin(googleAccessToken: string) {
       id: user.id,
       email: user.email,
       name: user.name,
-      avatar: user.avatar,
-      role: user.role,
       plan: user.plan,
     },
   };

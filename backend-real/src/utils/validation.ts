@@ -3,21 +3,21 @@ import { Plan, CandidateStatus, PaymentType } from '@prisma/client';
 
 // Schema de validação para registro de usuário
 export const registerSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(8, 'A senha deve ter pelo menos 8 caracteres'),
-  name: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres'),
+  email: z.string().email({ message: 'Email inválido' }),
+  password: z.string().min(8, { message: 'A senha deve ter pelo menos 8 caracteres' }),
+  name: z.string().min(2, { message: 'O nome deve ter pelo menos 2 caracteres' }),
   companyName: z.string().optional(),
 });
 
 // Schema de validação para login
 export const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(1, 'Senha obrigatória'),
+  email: z.string().email({ message: 'Email inválido' }),
+  password: z.string().min(1, { message: 'Senha obrigatória' }),
 });
 
 // Schema de validação para criação de job
 export const createJobSchema = z.object({
-  name: z.string().min(1, 'Nome da vaga é obrigatório'),
+  name: z.string().min(1, { message: 'Nome da vaga é obrigatório' }),
   description: z.string().optional(),
   template: z.string().default('default'),
   colorTheme: z.string().default('blue'),
@@ -35,7 +35,7 @@ export const updateJobSchema = z.object({
 
 // Schema de validação para criação de candidato
 export const createCandidateSchema = z.object({
-  nome: z.string().min(1, 'Nome é obrigatório'),
+  nome: z.string().min(1, { message: 'Nome é obrigatório' }),
   idade: z.number().int().min(16).max(100).optional(),
   cidade: z.string().optional(),
   estado: z.string().optional(),

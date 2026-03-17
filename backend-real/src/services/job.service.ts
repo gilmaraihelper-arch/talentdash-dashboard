@@ -15,7 +15,7 @@ export async function createJob(
       description: input.description,
       template: input.template || 'default',
       colorTheme: input.colorTheme || 'blue',
-      customFields: input.customFields || {},
+      customFields: input.customFields as any || {},
     },
   });
 }
@@ -77,7 +77,7 @@ export async function updateJob(
       description: input.description,
       template: input.template,
       colorTheme: input.colorTheme,
-      customFields: input.customFields,
+      customFields: input.customFields as any,
     },
   });
 }

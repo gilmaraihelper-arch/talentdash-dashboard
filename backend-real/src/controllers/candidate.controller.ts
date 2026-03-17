@@ -16,10 +16,15 @@ import {
   notFoundResponse,
 } from '../utils/response.js';
 
+// Helper to ensure string type from params
+function getParam(param: string | string[] | undefined): string {
+  return Array.isArray(param) ? param[0] : param || '';
+}
+
 // Criar candidato (público)
 export async function create(req: Request, res: Response): Promise<void> {
   try {
-    const { jobId } = req.params;
+    const jobId = getParam(req.params.jobId);
     const candidate = await createCandidate(jobId, req.body);
     createdResponse(res, candidate);
   } catch (error) {
@@ -40,7 +45,7 @@ export async function list(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { jobId } = req.params;
+    const jobId = getParam(req.params.jobId);
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
 
@@ -81,7 +86,7 @@ export async function getById(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { id } = req.params;
+    const id = getParam(req.params.id);
     const candidate = await getCandidateById(id, user.id);
     successResponse(res, candidate);
   } catch (error) {
@@ -102,7 +107,7 @@ export async function update(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { id } = req.params;
+    const id = getParam(req.params.id);
     const candidate = await updateCandidate(id, user.id, req.body);
     successResponse(res, candidate);
   } catch (error) {
@@ -123,7 +128,7 @@ export async function updateStatus(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { id } = req.params;
+    const id = getParam(req.params.id);
     const { status } = req.body;
     const candidate = await updateCandidateStatus(id, user.id, status);
     successResponse(res, candidate);
@@ -145,7 +150,7 @@ export async function remove(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { id } = req.params;
+    const id = getParam(req.params.id);
     await deleteCandidate(id, user.id);
     successResponse(res, { message: 'Candidato deletado com sucesso' });
   } catch (error) {
@@ -166,7 +171,7 @@ export async function addAnalysis(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { id } = req.params;
+    const id = getParam(req.params.id);
     const { summary, score, details } = req.body;
 
     const candidate = await addCandidateAnalysis(id, user.id, {

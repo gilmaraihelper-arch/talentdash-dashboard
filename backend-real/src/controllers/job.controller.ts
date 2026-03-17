@@ -14,6 +14,11 @@ import {
   notFoundResponse,
 } from '../utils/response.js';
 
+// Helper to ensure string type from params
+function getParam(param: string | string[] | undefined): string {
+  return Array.isArray(param) ? param[0] : param || '';
+}
+
 // Criar job
 export async function create(req: Request, res: Response): Promise<void> {
   try {
@@ -59,7 +64,7 @@ export async function getById(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { id } = req.params;
+    const id = getParam(req.params.id);
     const job = await getJobById(id, user.id);
     successResponse(res, job);
   } catch (error) {
@@ -80,7 +85,7 @@ export async function update(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { id } = req.params;
+    const id = getParam(req.params.id);
     const job = await updateJob(id, user.id, req.body);
     successResponse(res, job);
   } catch (error) {
@@ -101,7 +106,7 @@ export async function remove(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { id } = req.params;
+    const id = getParam(req.params.id);
     await deleteJob(id, user.id);
     successResponse(res, { message: 'Vaga deletada com sucesso' });
   } catch (error) {
