@@ -7,3 +7,4 @@ export { DataStructurePage } from './DataStructurePage';
 export { AddCandidatesPage } from './AddCandidatesPage';
 export { DashboardPage } from './DashboardPage';
 export { CandidateDetailPage } from './CandidateDetailPage';
+export { AdminPage } from './AdminPage';

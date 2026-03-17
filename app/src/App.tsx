@@ -27,6 +27,7 @@ const DataStructurePage = lazy(() => import(/* webpackChunkName: "dashboard" */ 
 const AddCandidatesPage = lazy(() => import(/* webpackChunkName: "dashboard" */ '@/sections/AddCandidatesPage').then(m => ({ default: m.AddCandidatesPage })));
 const DashboardPage = lazy(() => import(/* webpackChunkName: "dashboard" */ '@/sections/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const CandidateDetailPage = lazy(() => import(/* webpackChunkName: "dashboard" */ '@/sections/CandidateDetailPage').then(m => ({ default: m.CandidateDetailPage })));
+const AdminPage = lazy(() => import(/* webpackChunkName: "dashboard" */ '@/sections/AdminPage').then(m => ({ default: m.AdminPage })));
 
 function App() {
   const store = useStore();
@@ -95,6 +96,13 @@ function App() {
       return (
         <Suspense fallback={<PageLoader message="Carregando detalhes..." />}>
           <CandidateDetailPage store={store} />
+        </Suspense>
+      );
+    
+    case 'admin':
+      return (
+        <Suspense fallback={<PageLoader message="Carregando painel admin..." />}>
+          <AdminPage onBack={() => store.navigateTo('user-dashboard')} />
         </Suspense>
       );
     

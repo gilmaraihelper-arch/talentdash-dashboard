@@ -121,7 +121,8 @@ export type ViewType =
   | 'data-structure' 
   | 'add-candidates' 
   | 'dashboard' 
-  | 'candidate-detail';
+  | 'candidate-detail'
+  | 'admin';
 
 // Método de pagamento
 export type PaymentMethodType = 'credit_card' | 'pix' | 'boleto';
@@ -137,6 +138,8 @@ export interface PaymentMethod {
 }
 
 // Usuário
+export type UserRole = 'USER' | 'ADMIN';
+
 export interface User {
   id: string;
   email: string;
@@ -146,6 +149,7 @@ export interface User {
   plan: PlanType;
   planExpiryDate?: Date;
   paymentMethods: PaymentMethod[];
+  role: UserRole;
   createdAt: Date;
   updatedAt: Date;
 }

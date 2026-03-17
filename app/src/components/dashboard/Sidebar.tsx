@@ -1,20 +1,36 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import type { User } from '@/types';
+
+interface NavItem {
+  id: string;
+  label: string;
+  icon: string;
+  adminOnly?: boolean;
+}
 
 interface SidebarProps {
   activeItem?: string;
   onNavigate?: (item: string) => void;
+  user?: User | null;
 }
 
-const navItems = [
+const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
   { id: 'candidates', label: 'Candidatos', icon: '👥' },
   { id: 'jobs', label: 'Vagas', icon: '💼' },
   { id: 'analytics', label: 'Analytics', icon: '📈' },
   { id: 'settings', label: 'Configurações', icon: '⚙️' },
+  { id: 'admin', label: 'Admin', icon: '🛡️', adminOnly: true },
 ];
 
-export function Sidebar({ activeItem = 'dashboard', onNavigate }: SidebarProps) {
+export function Sidebar({ activeItem = 'dashboard', onNavigate, user }: SidebarProps) {
+  const isAdmin = user?.role === 'ADMIN';
+  
+  const visibleNavItems = navItems.filter(item => 
+    !item.adminOnly || (item.adminOnly && isAdmin)
+  );
+
   return (
     <aside className="w-16 lg:w-60 h-screen bg-white border-r border-slate-200 flex flex-col shrink-0 transition-all duration-300">
       {/* Logo */}
@@ -28,7 +44,7 @@ export function Sidebar({ activeItem = 'dashboard', onNavigate }: SidebarProps) 
 
       {/* Navigation */}
       <nav className="flex-1 py-4 px-2 lg:px-3 space-y-1">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <button
             key={item.id}
             onClick={() => onNavigate?.(item.id)}
@@ -49,11 +65,11 @@ export function Sidebar({ activeItem = 'dashboard', onNavigate }: SidebarProps) 
       <div className="p-4 border-t border-slate-100">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600">
-            GM
+            {user?.name?.charAt(0) || 'U'}
           </div>
           <div className="hidden lg:block">
-            <p className="text-sm font-medium text-slate-900">Gilmar</p>
-            <p className="text-xs text-slate-500">Admin</p>
+            <p className="text-sm font-medium text-slate-900">{user?.name || 'Usuário'}</p>
+            <p className="text-xs text-slate-500">{isAdmin ? 'Admin' : 'User'}</p>
           </div>
         </div>
       </div>
