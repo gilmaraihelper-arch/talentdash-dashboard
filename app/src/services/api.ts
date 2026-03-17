@@ -205,14 +205,20 @@ async function mockApiRequest<T>(
       db.users.push(user);
       saveMockDB(db);
     } else {
-      // Atualizar dados do usuário existente
+      // Atualizar dados do usuário existente com dados do Google
       user = existingUser;
-      if (name && name !== 'Usuário') {
+      // Sempre atualizar com dados do Google se disponíveis
+      if (name && name.trim()) {
         user.name = name;
       }
-      if (avatar) {
+      if (avatar && avatar.trim()) {
         user.avatar = avatar;
       }
+      if (email && email.trim() && email !== user.email) {
+        user.email = email;
+      }
+      (user as any).googleId = googleId;
+      user.updatedAt = new Date();
       saveMockDB(db);
     }
     
