@@ -63,6 +63,7 @@ async function apiRequest<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_URL}${endpoint}`;
+  let responseOk = true;
   
   try {
     const headers: Record<string, string> = {
@@ -79,6 +80,7 @@ async function apiRequest<T>(
       headers,
     });
     
+    responseOk = response.ok;
     const data = await response.json();
     
     if (!response.ok) {
@@ -91,9 +93,17 @@ async function apiRequest<T>(
     }
     
     return data;
-  } catch (error) {
+  } catch (error: any) {
     // Se for erro de rede (backend offline) ou CORS, usar mock/localStorage
-    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('CORS') || error.message.includes('Failed to fetch'))) {
+    const errorMessage = error?.message || '';
+    const isNetworkError = error instanceof TypeError && (
+      errorMessage.includes('fetch') || 
+      errorMessage.includes('CORS') || 
+      errorMessage.includes('Failed to fetch') ||
+      errorMessage.includes('Network request failed')
+    );
+    
+    if (isNetworkError || !responseOk) {
       console.warn('API não disponível (CORS/offline), usando dados mock:', endpoint);
       return mockApiRequest<T>(endpoint, options);
     }
