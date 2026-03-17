@@ -72,9 +72,19 @@ export const fetchUserProfile = async (userId: string): Promise<User | null> => 
 };
 
 export const createUserProfile = async (userData: Partial<User>) => {
+  // Only insert fields that exist in the database
+  const { id, email, password, name, company_name } = userData as any;
+  const cleanData = { 
+    id, 
+    email, 
+    password, 
+    name, 
+    company_name: company_name || '' 
+  };
+  
   const { data, error } = await supabase
     .from('users')
-    .insert(userData)
+    .insert(cleanData)
     .select()
     .single();
   

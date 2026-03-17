@@ -213,15 +213,12 @@ export function useStore() {
         throw new Error('Erro ao criar conta');
       }
       
-      // Criar perfil do usuário
+      // Criar perfil do usuário - apenas campos que existem no banco
       const userProfile = await createUserProfile({
         id: user.id,
         email: data.email,
         name: data.name,
         company_name: data.companyName || '',
-        plan: data.plan || 'free',
-        role: 'USER',
-        payment_methods: [],
       } as Partial<User>);
       
       const userWithCamel = snakeToCamel(userProfile);
