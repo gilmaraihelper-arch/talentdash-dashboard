@@ -49,11 +49,14 @@ export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps
 
     // Usar popup (TokenClient) em vez de redirect
     try {
+      console.log('[Google] Iniciando initTokenClient...');
       const client = window.google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
         scope: 'email profile openid',
         callback: (response: any) => {
+          console.log('[Google] Callback recebido:', response);
           if (response.error) {
+            console.error('[Google] Erro no callback:', response.error);
             onError?.(new Error(response.error));
             return;
           }
@@ -74,9 +77,11 @@ export function GoogleLoginButton({ onSuccess, onError }: GoogleLoginButtonProps
             });
         },
       });
+      console.log('[Google] Chamando requestAccessToken...');
       client.requestAccessToken();
+      console.log('[Google] requestAccessToken chamado');
     } catch (err) {
-      console.error('Erro ao iniciar Google OAuth:', err);
+      console.error('[Google] Erro ao iniciar OAuth:', err);
       onError?.(err as Error);
     }
   }, [onSuccess, onError, isScriptLoaded]);
