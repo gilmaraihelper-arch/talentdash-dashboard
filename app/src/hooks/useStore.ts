@@ -12,7 +12,24 @@ import type {
   User,
   PaymentMethod
 } from '@/types';
-import { authAPI, jobsAPI, candidatesAPI, paymentsAPI, getAuthToken } from '@/services/api';
+import { 
+  supabase,
+  signInWithEmail,
+  signUpWithEmail,
+  signInWithGoogle,
+  signOut,
+  getCurrentUser,
+  fetchUserProfile,
+  createUserProfile,
+  fetchJobs,
+  createJob as createJobDb,
+  updateJob as updateJobDb,
+  deleteJob as deleteJobDb,
+  fetchCandidates,
+  createCandidate as createCandidateDb,
+  updateCandidate as updateCandidateDb,
+  deleteCandidate as deleteCandidateDb,
+} from '@/lib/supabase';
 
 // Estado inicial
 const initialState: AppState = {
@@ -25,20 +42,48 @@ const initialState: AppState = {
   candidates: [],
 };
 
+// Helper para converter snake_case do Supabase para camelCase do frontend
+const snakeToCamel = (obj: any): any => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(snakeToCamel);
+  
+  return Object.keys(obj).reduce((acc, key) => {
+    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    acc[camelKey] = snakeToCamel(obj[key]);
+    return acc;
+  }, {} as any);
+};
+
+// Helper para converter camelCase do frontend para snake_case do Supabase
+const camelToSnake = (obj: any): any => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(camelToSnake);
+  
+  return Object.keys(obj).reduce((acc, key) => {
+    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    acc[snakeKey] = camelToSnake(obj[key]);
+    return acc;
+  }, {} as any);
+};
+
 // Hook de estado global
 export function useStore() {
   const [state, setState] = useState<AppState>(initialState);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Check for existing token on mount
+  // Check for existing session on mount
   useEffect(() => {
     let isMounted = true;
     
     const initAuth = async () => {
-      const token = getAuthToken();
-      if (token && isMounted) {
-        await loadUser();
+      try {
+        const user = await getCurrentUser();
+        if (user && isMounted) {
+          await loadUser(user.id);
+        }
+      } catch (err) {
+        console.error('Failed to check auth:', err);
       }
     };
     
@@ -47,22 +92,25 @@ export function useStore() {
     return () => { isMounted = false; };
   }, []);
 
-  // Load user from token
-  const loadUser = async () => {
+  // Load user from session
+  const loadUser = async (userId: string) => {
     try {
       setIsLoading(true);
-      const user = await authAPI.getMe();
-      setState(prev => ({
-        ...prev,
-        user,
-        isAuthenticated: true,
-      }));
-      // Load user's jobs
-      await loadJobs();
+      const profile = await fetchUserProfile(userId);
+      if (profile) {
+        const userWithCamel = snakeToCamel(profile);
+        setState(prev => ({
+          ...prev,
+          user: userWithCamel,
+          isAuthenticated: true,
+        }));
+        // Load user's jobs
+        await loadJobs(userId);
+      }
     } catch (err) {
       console.error('Failed to load user:', err);
-      // Token might be invalid, clear it
-      authAPI.logout();
+      // Session might be invalid
+      await signOut();
     } finally {
       setIsLoading(false);
     }
@@ -111,21 +159,35 @@ export function useStore() {
     try {
       setIsLoading(true);
       setError(null);
-      const { user } = await authAPI.login(email, password);
+      
+      const { user } = await signInWithEmail(email, password);
+      
+      if (!user) {
+        throw new Error('Erro ao fazer login');
+      }
+      
+      // Load user profile
+      const profile = await fetchUserProfile(user.id);
+      if (!profile) {
+        throw new Error('Perfil não encontrado');
+      }
+      
+      const userWithCamel = snakeToCamel(profile);
       
       setState(prev => ({
         ...prev,
-        user,
+        user: userWithCamel,
         isAuthenticated: true,
         currentView: 'user-dashboard',
       }));
       
       // Load user's jobs
-      await loadJobs();
+      await loadJobs(user.id);
       
-      return user;
+      return userWithCamel;
     } catch (err: any) {
-      setError(err.message || 'Erro ao fazer login');
+      const message = err.message || 'Erro ao fazer login';
+      setError(message);
       throw err;
     } finally {
       setIsLoading(false);
@@ -144,24 +206,42 @@ export function useStore() {
       setIsLoading(true);
       setError(null);
       
-      // Chama a API de registro - pode lançar erro se email já existe
-      const { user } = await authAPI.register(data);
+      // Criar usuário no auth
+      const { user } = await signUpWithEmail(data.email, data.password, data.name, data.companyName);
+      
+      if (!user) {
+        throw new Error('Erro ao criar conta');
+      }
+      
+      // Criar perfil do usuário
+      const userProfile = await createUserProfile({
+        id: user.id,
+        email: data.email,
+        name: data.name,
+        company_name: data.companyName || '',
+        plan: data.plan || 'free',
+        role: 'USER',
+        payment_methods: [],
+      } as Partial<User>);
+      
+      const userWithCamel = snakeToCamel(userProfile);
       
       // Atualiza estado e redireciona para dashboard
       setState(prev => ({
         ...prev,
-        user,
+        user: userWithCamel,
         isAuthenticated: true,
         currentView: 'user-dashboard',
       }));
       
-      // Carrega jobs do usuário
-      await loadJobs();
-      
-      return user;
+      return userWithCamel;
     } catch (err: any) {
-      setError(err.message || 'Erro ao criar conta');
-      // Re-lança o erro para o componente poder mostrar mensagem
+      const message = err.message || 'Erro ao criar conta';
+      if (message.includes('already exists') || message.includes('já cadastrado')) {
+        setError('E-mail já cadastrado');
+      } else {
+        setError(message);
+      }
       throw err;
     } finally {
       setIsLoading(false);
@@ -169,71 +249,83 @@ export function useStore() {
   }, []);
 
   // Logout
-  const logout = useCallback(() => {
-    authAPI.logout();
-    setState(initialState);
+  const logout = useCallback(async () => {
+    try {
+      await signOut();
+      setState(initialState);
+    } catch (err) {
+      console.error('Logout error:', err);
+      setState(initialState);
+    }
   }, []);
 
   // Atualizar perfil do usuário
   const updateUserProfile = useCallback(async (updates: Partial<User>) => {
     try {
       setIsLoading(true);
-      const user = await authAPI.updateProfile(updates);
+      
+      const { data, error } = await supabase
+        .from('users')
+        .update(camelToSnake(updates))
+        .eq('id', state.user?.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      const userWithCamel = snakeToCamel(data);
       setState(prev => ({
         ...prev,
-        user,
+        user: userWithCamel,
       }));
-      return user;
+      return userWithCamel;
     } catch (err: any) {
       setError(err.message || 'Erro ao atualizar perfil');
       throw err;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [state.user?.id]);
 
   // Mudar plano do usuário
   const changePlan = useCallback(async (newPlan: PlanType) => {
     try {
       setIsLoading(true);
-      const user = await authAPI.changePlan(newPlan);
+      
+      const { data, error } = await supabase
+        .from('users')
+        .update({ plan: newPlan })
+        .eq('id', state.user?.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      const userWithCamel = snakeToCamel(data);
       setState(prev => ({
         ...prev,
-        user,
+        user: userWithCamel,
       }));
-      return user;
+      return userWithCamel;
     } catch (err: any) {
       setError(err.message || 'Erro ao mudar plano');
       throw err;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [state.user?.id]);
 
   // ============ GOOGLE OAUTH LOGIN ============
-  const googleLogin = useCallback(async (accessToken: string, userInfo?: any) => {
+  const googleLogin = useCallback(async (_accessToken: string, _userInfo?: any) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Chamar o endpoint do backend para validar o token e fazer login
-      const { user, token } = await authAPI.googleLogin(accessToken, userInfo);
+      // Iniciar OAuth com Google - isso redireciona para o Google
+      await signInWithGoogle();
       
-      // Salvar token no localStorage
-      localStorage.setItem('talentdash_token', token);
-      
-      // Atualizar estado
-      setState(prev => ({
-        ...prev,
-        user,
-        isAuthenticated: true,
-        currentView: 'user-dashboard',
-      }));
-      
-      // Load user's jobs
-      await loadJobs();
-      
-      return user;
+      // O redirecionamento do OAuth vai retornar para a página
+      // A lógica de callback deve ser tratada no componente de auth callback
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer login com Google');
       throw err;
@@ -245,11 +337,15 @@ export function useStore() {
   // ============ JOBS (MAPEAMENTOS) ============
   
   // Carregar jobs do usuário
-  const loadJobs = async () => {
+  const loadJobs = async (userId?: string) => {
     try {
-      const jobs = await jobsAPI.getAll();
-      setState(prev => ({ ...prev, jobs }));
-      return jobs;
+      const currentUserId = userId || state.user?.id;
+      if (!currentUserId) return [];
+      
+      const jobs = await fetchJobs(currentUserId);
+      const jobsWithCamel = snakeToCamel(jobs);
+      setState(prev => ({ ...prev, jobs: jobsWithCamel }));
+      return jobsWithCamel;
     } catch (err: any) {
       console.error('Failed to load jobs:', err);
       return [];
@@ -273,44 +369,55 @@ export function useStore() {
       setIsLoading(true);
       setError(null);
       
-      const newJob = await jobsAPI.create({
+      if (!state.user?.id) {
+        throw new Error('Usuário não autenticado');
+      }
+      
+      const jobData = {
         name,
         plan,
-        customFields,
+        custom_fields: customFields,
         description: options?.description,
         template: options?.template || 'blank',
-        dashboardModel: options?.dashboardModel || 'padrao',
-        colorTheme: options?.colorTheme || 'blue',
-      });
+        dashboard_model: options?.dashboardModel || 'padrao',
+        color_theme: options?.colorTheme || 'blue',
+        user_id: state.user.id,
+      };
+      
+      const newJob = await createJobDb(jobData);
+      const jobWithCamel = snakeToCamel(newJob);
       
       setState(prev => ({
         ...prev,
-        jobs: [...prev.jobs, newJob],
-        selectedJob: newJob,
+        jobs: [...prev.jobs, jobWithCamel],
+        selectedJob: jobWithCamel,
       }));
       
-      return newJob;
+      return jobWithCamel;
     } catch (err: any) {
       setError(err.message || 'Erro ao criar mapeamento');
       throw err;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [state.user?.id]);
 
   // Atualizar job
   const updateJob = useCallback(async (jobId: string, updates: Partial<Job>) => {
     try {
       setIsLoading(true);
-      const updatedJob = await jobsAPI.update(jobId, updates);
+      
+      const updatesWithSnake = camelToSnake(updates);
+      const updatedJob = await updateJobDb(jobId, updatesWithSnake);
+      const jobWithCamel = snakeToCamel(updatedJob);
       
       setState(prev => ({
         ...prev,
-        jobs: prev.jobs.map(j => j.id === jobId ? updatedJob : j),
-        selectedJob: prev.selectedJob?.id === jobId ? updatedJob : prev.selectedJob,
+        jobs: prev.jobs.map(j => j.id === jobId ? jobWithCamel : j),
+        selectedJob: prev.selectedJob?.id === jobId ? jobWithCamel : prev.selectedJob,
       }));
       
-      return updatedJob;
+      return jobWithCamel;
     } catch (err: any) {
       setError(err.message || 'Erro ao atualizar mapeamento');
       throw err;
@@ -323,7 +430,7 @@ export function useStore() {
   const deleteJob = useCallback(async (jobId: string) => {
     try {
       setIsLoading(true);
-      await jobsAPI.delete(jobId);
+      await deleteJobDb(jobId);
       
       setState(prev => ({
         ...prev,
@@ -346,8 +453,9 @@ export function useStore() {
     // Load candidates for this job
     if (job) {
       try {
-        const candidates = await candidatesAPI.getAll(job.id);
-        setState(prev => ({ ...prev, candidates }));
+        const candidates = await fetchCandidates(job.id);
+        const candidatesWithCamel = snakeToCamel(candidates);
+        setState(prev => ({ ...prev, candidates: candidatesWithCamel }));
       } catch (err) {
         console.error('Failed to load candidates:', err);
       }
@@ -362,27 +470,32 @@ export function useStore() {
     
     try {
       setIsLoading(true);
-      const result = await candidatesAPI.createBulk(
-        state.selectedJob.id,
-        candidates.map(c => ({
+      
+      const createdCandidates: Candidate[] = [];
+      for (const c of candidates) {
+        const candidateData = {
+          job_id: state.selectedJob.id,
           nome: c.nome,
           idade: c.idade,
           cidade: c.cidade,
           curriculo: c.curriculo,
-          pretensaoSalarial: c.pretensaoSalarial,
-          salarioAtual: c.salarioAtual,
+          pretensao_salarial: c.pretensaoSalarial,
+          salario_atual: c.salarioAtual,
           status: c.status,
           observacoes: c.observacoes,
-          customFields: c.customFields,
-        }))
-      );
+          custom_fields: c.customFields,
+        };
+        
+        const newCandidate = await createCandidateDb(candidateData);
+        createdCandidates.push(snakeToCamel(newCandidate));
+      }
       
       setState(prev => ({
         ...prev,
-        candidates: [...prev.candidates, ...result.candidates],
+        candidates: [...prev.candidates, ...createdCandidates],
       }));
       
-      return result.candidates;
+      return createdCandidates;
     } catch (err: any) {
       setError(err.message || 'Erro ao adicionar candidatos');
       throw err;
@@ -397,14 +510,29 @@ export function useStore() {
     
     try {
       setIsLoading(true);
-      const newCandidate = await candidatesAPI.create(state.selectedJob.id, candidate);
+      
+      const candidateData = {
+        job_id: state.selectedJob.id,
+        nome: candidate.nome,
+        idade: candidate.idade,
+        cidade: candidate.cidade,
+        curriculo: candidate.curriculo,
+        pretensao_salarial: candidate.pretensaoSalarial,
+        salario_atual: candidate.salarioAtual,
+        status: candidate.status,
+        observacoes: candidate.observacoes,
+        custom_fields: candidate.customFields,
+      };
+      
+      const newCandidate = await createCandidateDb(candidateData);
+      const candidateWithCamel = snakeToCamel(newCandidate);
       
       setState(prev => ({
         ...prev,
-        candidates: [...prev.candidates, newCandidate],
+        candidates: [...prev.candidates, candidateWithCamel],
       }));
       
-      return newCandidate;
+      return candidateWithCamel;
     } catch (err: any) {
       setError(err.message || 'Erro ao adicionar candidato');
       throw err;
@@ -419,20 +547,19 @@ export function useStore() {
     
     try {
       setIsLoading(true);
-      const updatedCandidate = await candidatesAPI.update(
-        state.selectedJob.id,
-        candidateId,
-        updates
-      );
+      
+      const updatesWithSnake = camelToSnake(updates);
+      const updatedCandidate = await updateCandidateDb(candidateId, updatesWithSnake);
+      const candidateWithCamel = snakeToCamel(updatedCandidate);
       
       setState(prev => ({
         ...prev,
         candidates: prev.candidates.map(c => 
-          c.id === candidateId ? updatedCandidate : c
+          c.id === candidateId ? candidateWithCamel : c
         ),
       }));
       
-      return updatedCandidate;
+      return candidateWithCamel;
     } catch (err: any) {
       setError(err.message || 'Erro ao atualizar candidato');
       throw err;
@@ -455,7 +582,7 @@ export function useStore() {
     
     try {
       setIsLoading(true);
-      await candidatesAPI.delete(state.selectedJob.id, candidateId);
+      await deleteCandidateDb(candidateId);
       
       setState(prev => ({
         ...prev,
@@ -485,37 +612,51 @@ export function useStore() {
   const addPaymentMethod = useCallback(async (paymentMethod: Omit<PaymentMethod, 'id'>) => {
     try {
       setIsLoading(true);
-      const newMethod = await paymentsAPI.create(paymentMethod);
       
+      const newMethods = [...(state.user?.paymentMethods || []), paymentMethod];
+      const { data, error } = await supabase
+        .from('users')
+        .update({ payment_methods: newMethods })
+        .eq('id', state.user?.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      const userWithCamel = snakeToCamel(data);
       setState(prev => ({
         ...prev,
-        user: prev.user ? {
-          ...prev.user,
-          paymentMethods: [...(prev.user.paymentMethods || []), newMethod],
-        } : null,
+        user: userWithCamel,
       }));
       
-      return newMethod;
+      return paymentMethod;
     } catch (err: any) {
       setError(err.message || 'Erro ao adicionar método de pagamento');
       throw err;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [state.user?.id, state.user?.paymentMethods]);
 
   // Remover método de pagamento
   const removePaymentMethod = useCallback(async (paymentMethodId: string) => {
     try {
       setIsLoading(true);
-      await paymentsAPI.delete(paymentMethodId);
       
+      const newMethods = state.user?.paymentMethods?.filter(pm => pm.id !== paymentMethodId) || [];
+      const { data, error } = await supabase
+        .from('users')
+        .update({ payment_methods: newMethods })
+        .eq('id', state.user?.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      const userWithCamel = snakeToCamel(data);
       setState(prev => ({
         ...prev,
-        user: prev.user ? {
-          ...prev.user,
-          paymentMethods: prev.user.paymentMethods?.filter(pm => pm.id !== paymentMethodId) || [],
-        } : null,
+        user: userWithCamel,
       }));
     } catch (err: any) {
       setError(err.message || 'Erro ao remover método de pagamento');
@@ -523,23 +664,31 @@ export function useStore() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [state.user?.id, state.user?.paymentMethods]);
 
   // Definir método de pagamento padrão
   const setDefaultPaymentMethod = useCallback(async (paymentMethodId: string) => {
     try {
       setIsLoading(true);
-      await paymentsAPI.setDefault(paymentMethodId);
       
+      const newMethods = state.user?.paymentMethods?.map(pm => ({
+        ...pm,
+        isDefault: pm.id === paymentMethodId,
+      })) || [];
+      
+      const { data, error } = await supabase
+        .from('users')
+        .update({ payment_methods: newMethods })
+        .eq('id', state.user?.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      const userWithCamel = snakeToCamel(data);
       setState(prev => ({
         ...prev,
-        user: prev.user ? {
-          ...prev.user,
-          paymentMethods: prev.user.paymentMethods?.map(pm => ({
-            ...pm,
-            isDefault: pm.id === paymentMethodId,
-          })) || [],
-        } : null,
+        user: userWithCamel,
       }));
     } catch (err: any) {
       setError(err.message || 'Erro ao definir método padrão');
@@ -547,7 +696,7 @@ export function useStore() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [state.user?.id, state.user?.paymentMethods]);
 
   // Resetar estado
   const resetState = useCallback(() => {
