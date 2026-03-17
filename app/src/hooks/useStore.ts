@@ -172,6 +172,49 @@ export function useStore() {
     }
   }, []);
 
+  // ============ GOOGLE OAUTH LOGIN ============
+  const googleLogin = useCallback(async (googleUser: { email: string; name: string; picture?: string }) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Criar ou logar usuário com dados do Google
+      // Em produção, isso deve chamar uma API específica para OAuth
+      const mockUser: User = {
+        id: 'google-' + googleUser.email,
+        email: googleUser.email,
+        name: googleUser.name,
+        avatar: googleUser.picture,
+        plan: 'PRO', // Usuários Google começam com PRO
+        role: googleUser.email === 'gilmar.aihelper@gmail.com' ? 'ADMIN' : 'USER',
+        paymentMethods: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      // Salvar no localStorage para persistência
+      localStorage.setItem('auth_token', 'google-oauth-token');
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      
+      setState(prev => ({
+        ...prev,
+        user: mockUser,
+        isAuthenticated: true,
+        currentView: 'user-dashboard',
+      }));
+      
+      // Load user's jobs
+      await loadJobs();
+      
+      return mockUser;
+    } catch (err: any) {
+      setError(err.message || 'Erro ao fazer login com Google');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   // ============ JOBS (MAPEAMENTOS) ============
   
   // Carregar jobs do usuário
@@ -496,6 +539,7 @@ export function useStore() {
     navigateTo,
     // Auth
     login,
+    googleLogin,
     register,
     logout,
     updateUserProfile,

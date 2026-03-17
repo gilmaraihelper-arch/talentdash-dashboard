@@ -26,7 +26,7 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ store }: LoginPageProps) {
-  const { navigateTo, login } = store;
+  const { navigateTo, login, googleLogin } = store;
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -153,9 +153,14 @@ export function LoginPage({ store }: LoginPageProps) {
             {/* Google Login - Primeiro */}
             <GoogleLoginButton
               onSuccess={(token, user) => {
-                // TODO: Implementar integração com backend
-                console.log('Google login success:', token, user);
-                login(user.email, 'google-oauth');
+                // Login com Google OAuth
+                googleLogin({
+                  email: user.email,
+                  name: user.name,
+                  picture: user.picture,
+                }).catch((error) => {
+                  setLoginError('Erro ao fazer login com Google: ' + error.message);
+                });
               }}
               onError={(error) => {
                 setLoginError('Erro ao fazer login com Google: ' + error.message);
