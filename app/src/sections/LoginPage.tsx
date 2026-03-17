@@ -87,12 +87,7 @@ export function LoginPage({ store }: LoginPageProps) {
         {/* Left side - Branding */}
         <div className="hidden lg:block space-y-8">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
-              <TrendingUp className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-              taldash
-            </span>
+            <img src="/logo.jpg" alt="taldash" className="h-12 w-auto object-contain" />
           </div>
           
           <div className="space-y-4">

@@ -131,12 +131,7 @@ export function RegisterPage({ store }: RegisterPageProps) {
         <div className="w-full max-w-4xl relative z-10">
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
-                <TrendingUp className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                taldash
-              </span>
+              <img src="/logo.jpg" alt="taldash" className="h-12 w-auto object-contain" />
             </div>
             <h1 className="text-3xl font-bold text-slate-900 mb-2">
               Escolha seu plano
