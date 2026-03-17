@@ -470,10 +470,7 @@ export function LandingPage({ store }: LandingPageProps) {
         <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
-                <TrendingUp className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">taldash</span>
+              <img src="/logo.jpg" alt="taldash" className="h-10 w-auto object-contain" />
             </div>
             
             <nav className="hidden lg:flex items-center gap-1">
@@ -866,10 +863,7 @@ export function LandingPage({ store }: LandingPageProps) {
         <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-lg font-bold text-white">taldash</span>
+              <img src="/logo.jpg" alt="taldash" className="h-8 w-auto object-contain" />
             </div>
             <p className="text-sm">© 2024 taldash. Todos os direitos reservados.</p>
           </div>
