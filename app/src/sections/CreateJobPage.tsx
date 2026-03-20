@@ -294,7 +294,9 @@ export function CreateJobPage({ store }: CreateJobPageProps) {
       });
       navigateTo('data-structure');
     } catch (error) {
-      console.error('Erro ao criar mapeamento:', error);
+      const errMsg = error instanceof Error ? error.message : JSON.stringify(error);
+      console.error('Erro ao criar mapeamento:', errMsg);
+      alert('Erro ao criar: ' + errMsg);
     } finally {
       setIsCreating(false);
     }

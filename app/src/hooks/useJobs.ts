@@ -100,7 +100,9 @@ export function useJobs(
       }));
       return jobWithCamel;
     } catch (err: unknown) {
-      setError((err as Error).message || 'Erro ao criar mapeamento');
+      const errMsg = err instanceof Error ? err.message : JSON.stringify(err);
+      console.error('createJob error:', errMsg);
+      setError(errMsg || 'Erro ao criar mapeamento');
       throw err;
     } finally {
       setIsLoading(false);
