@@ -174,7 +174,7 @@ export function UserDashboardPage({ store }: UserDashboardPageProps) {
                 className="hidden sm:flex items-center gap-2"
               >
                 <Crown className="w-4 h-4 text-amber-500" />
-                <span className="capitalize">{PLANS[user.plan].name}</span>
+                <span className="capitalize">{PLANS[user.plan || 'free'].name}</span>
               </Button>
               
               <DropdownMenu>
@@ -353,11 +353,11 @@ export function UserDashboardPage({ store }: UserDashboardPageProps) {
                       <div className="flex items-center gap-4">
                         <div 
                           className="w-12 h-12 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: `${PLANS[job.plan].name === 'Free' ? '#94a3b8' : '#4F46E5'}15` }}
+                          style={{ backgroundColor: `${PLANS[job.plan || 'free'].name === 'Free' ? '#94a3b8' : '#4F46E5'}15` }}
                         >
                           <Briefcase 
                             className="w-6 h-6"
-                            style={{ color: PLANS[job.plan].name === 'Free' ? '#94a3b8' : '#4F46E5' }}
+                            style={{ color: PLANS[job.plan || 'free'].name === 'Free' ? '#94a3b8' : '#4F46E5' }}
                           />
                         </div>
                         <div>
@@ -365,7 +365,7 @@ export function UserDashboardPage({ store }: UserDashboardPageProps) {
                           <div className="flex items-center gap-2 text-sm text-slate-500">
                             <span>{stats.total} candidatos</span>
                             <span>•</span>
-                            <span className="capitalize">{PLANS[job.plan].name}</span>
+                            <span className="capitalize">{PLANS[job.plan || 'free'].name}</span>
                             <span>•</span>
                             <span>{new Date(job.createdAt).toLocaleDateString('pt-BR')}</span>
                           </div>
@@ -503,7 +503,7 @@ export function UserDashboardPage({ store }: UserDashboardPageProps) {
               Gerenciar Plano
             </DialogTitle>
             <DialogDescription>
-              Seu plano atual: <span className="font-medium capitalize">{PLANS[user.plan].name}</span>
+              Seu plano atual: <span className="font-medium capitalize">{PLANS[user.plan || 'free'].name}</span>
             </DialogDescription>
           </DialogHeader>
           
