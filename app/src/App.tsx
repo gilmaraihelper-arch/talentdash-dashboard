@@ -33,12 +33,13 @@ const AdminPage = lazy(() => import(/* webpackChunkName: "dashboard" */ '@/secti
 // ============================================
 function ProtectedRoute({ 
   children, 
-  adminOnly = false 
+  adminOnly = false,
+  store,
 }: { 
   children: React.ReactNode;
   adminOnly?: boolean;
+  store: ReturnType<typeof useStore>;
 }) {
-  const store = useStore();
   const location = useLocation();
 
   if (!store.state.isAuthenticated) {
@@ -76,7 +77,7 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute store={store}>
               <UserDashboardPage store={store} />
             </ProtectedRoute>
           }
@@ -84,7 +85,7 @@ function App() {
         <Route
           path="/dashboard/create-job"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute store={store}>
               <CreateJobPage store={store} />
             </ProtectedRoute>
           }
@@ -92,7 +93,7 @@ function App() {
         <Route
           path="/dashboard/data-structure"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute store={store}>
               <DataStructurePage store={store} />
             </ProtectedRoute>
           }
@@ -100,7 +101,7 @@ function App() {
         <Route
           path="/dashboard/add-candidates"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute store={store}>
               <AddCandidatesPage store={store} />
             </ProtectedRoute>
           }
@@ -108,7 +109,7 @@ function App() {
         <Route
           path="/dashboard/analytics"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute store={store}>
               <DashboardPage store={store} />
             </ProtectedRoute>
           }
@@ -116,7 +117,7 @@ function App() {
         <Route
           path="/dashboard/candidate/:id"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute store={store}>
               <CandidateDetailPage store={store} />
             </ProtectedRoute>
           }
@@ -126,7 +127,7 @@ function App() {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute adminOnly>
+            <ProtectedRoute adminOnly store={store}>
               <AdminPage onBack={() => store.navigateTo('user-dashboard')} />
             </ProtectedRoute>
           }
