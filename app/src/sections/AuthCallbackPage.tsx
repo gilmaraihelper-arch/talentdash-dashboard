@@ -4,45 +4,47 @@ import { supabase } from '@/lib/supabase';
 
 /**
  * Página de callback do OAuth (Google, etc.)
- * O Supabase redireciona para cá após autenticação social.
- * Usa onAuthStateChange para aguardar a sessão ser estabelecida.
+ * Aguarda a sessão ser processada pelo Supabase e redireciona pro dashboard.
+ * O useStore.initAuth detecta a sessão automaticamente ao montar o App.
  */
 export function AuthCallbackPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Escuta mudanças de auth — o Supabase processa o hash da URL automaticamente
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[AuthCallback] event:', event, 'session:', !!session);
+    let redirected = false;
 
-      if (event === 'SIGNED_IN' && session) {
-        subscription.unsubscribe();
-        navigate('/dashboard', { replace: true });
-        return;
+    const tryRedirect = async () => {
+      if (redirected) return;
+
+      // Tenta até 10x com intervalo de 500ms
+      for (let i = 0; i < 10; i++) {
+        await new Promise(r => setTimeout(r, 500));
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          redirected = true;
+          navigate('/dashboard', { replace: true });
+          return;
+        }
       }
 
-      if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
-        subscription.unsubscribe();
+      // Não encontrou sessão após 5s — vai pro login
+      if (!redirected) {
         navigate('/login', { replace: true });
-        return;
+      }
+    };
+
+    // Escuta mudança de estado imediatamente
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user && !redirected) {
+        redirected = true;
+        subscription.unsubscribe();
+        navigate('/dashboard', { replace: true });
       }
     });
 
-    // Fallback: se depois de 5s não resolveu, tenta verificar sessão diretamente
-    const timeout = setTimeout(async () => {
-      const { data } = await supabase.auth.getSession();
-      subscription.unsubscribe();
-      if (data.session) {
-        navigate('/dashboard', { replace: true });
-      } else {
-        navigate('/login', { replace: true });
-      }
-    }, 5000);
+    tryRedirect();
 
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   return (
