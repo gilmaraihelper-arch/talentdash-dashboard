@@ -42,14 +42,20 @@ export function useAuth(
   initialState: AppState,
 ) {
   const navigate = useNavigate();
-  const { signIn } = useSignIn();
+  const { signIn, isLoaded: signInLoaded } = useSignIn();
   const { signUp } = useSignUp();
-  const { user: clerkUser } = useUser();
+  const { user: clerkUser, isSignedIn } = useUser();
 
   const login = useCallback(async (email: string, password: string) => {
     try {
       setIsLoading(true);
       setError(null);
+
+      // Se já está logado, vai pro dashboard direto
+      if (isSignedIn) {
+        navigate('/dashboard', { replace: true });
+        return;
+      }
 
       if (!signIn) throw new Error('Clerk não inicializado');
 
@@ -67,6 +73,11 @@ export function useAuth(
       }
     } catch (err: unknown) {
       const message = (err as Error).message || 'Erro ao fazer login';
+      // Se já está logado, redireciona pro dashboard em vez de mostrar erro
+      if (message.toLowerCase().includes('already signed in') || message.toLowerCase().includes('já está logado')) {
+        navigate('/dashboard', { replace: true });
+        return;
+      }
       setError(message);
       throw err;
     } finally {
