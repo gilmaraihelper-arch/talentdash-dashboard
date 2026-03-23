@@ -8,7 +8,7 @@ interface GoogleLoginButtonProps {
 
 /**
  * Botão de login com Google usando Clerk OAuth.
- * Ao clicar, redireciona direto para o Google via Clerk.
+ * Usa afterSignInUrl para garantir redirect pro dashboard após login.
  */
 export function GoogleLoginButton({ onError }: GoogleLoginButtonProps) {
   const { signIn, isLoaded } = useSignIn();
@@ -18,10 +18,11 @@ export function GoogleLoginButton({ onError }: GoogleLoginButtonProps) {
     try {
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
-        redirectUrl: '/sso-callback',
-        redirectUrlComplete: '/dashboard',
+        redirectUrl: `${window.location.origin}/sso-callback`,
+        redirectUrlComplete: `${window.location.origin}/dashboard`,
       });
     } catch (err: any) {
+      console.error('Google login error:', err);
       onError?.(err);
     }
   };
@@ -43,3 +44,4 @@ export function GoogleLoginButton({ onError }: GoogleLoginButtonProps) {
     </Button>
   );
 }
+
