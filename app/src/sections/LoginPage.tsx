@@ -30,14 +30,16 @@ interface LoginPageProps {
 export function LoginPage({ store }: LoginPageProps) {
   const { navigateTo, login, googleLogin } = store;
   const { isSignedIn, isLoaded } = useAuth();
+
+  // ⚠️ Todos os hooks DEVEM vir antes de qualquer return condicional (Rules of Hooks)
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // Se já está autenticado, redireciona pro dashboard sem mostrar nada
   if (isLoaded && isSignedIn) {
     return <Navigate to="/dashboard" replace />;
   }
-  const [isLoading, setIsLoading] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
 
   const {
     register,

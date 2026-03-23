@@ -18,8 +18,10 @@ export function GoogleLoginButton({ onError }: GoogleLoginButtonProps) {
     try {
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
+        // redirectUrl: página que processa os tokens OAuth (AuthenticateWithRedirectCallback)
         redirectUrl: `${window.location.origin}/sso-callback`,
-        redirectUrlComplete: `${window.location.origin}/sso-callback`,
+        // redirectUrlComplete: destino final após sessão criada
+        redirectUrlComplete: `${window.location.origin}/dashboard`,
       });
     } catch (err: any) {
       console.error('Google login error:', err);
