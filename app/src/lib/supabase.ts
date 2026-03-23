@@ -82,9 +82,10 @@ export const createUserProfile = async (userData: Partial<User>) => {
     company_name: company_name || '' 
   };
   
+  // Use upsert to avoid conflict when profile already exists (race condition between register and onAuthStateChange)
   const { data, error } = await supabase
     .from('users')
-    .insert(cleanData)
+    .upsert(cleanData, { onConflict: 'id' })
     .select()
     .single();
   

@@ -113,7 +113,14 @@ export function useAuth(
         currentView: 'user-dashboard',
       }));
 
-      navigate('/dashboard');
+      // onAuthStateChange no useStore já vai detectar o SIGNED_IN e navegar para /dashboard
+      // mas garantimos aqui também caso não dispare
+      setTimeout(() => {
+        if (window.location.pathname !== '/dashboard') {
+          navigate('/dashboard');
+        }
+      }, 1000);
+
       return userWithCamel;
     } catch (err: unknown) {
       const message = (err as Error).message || 'Erro ao criar conta';
