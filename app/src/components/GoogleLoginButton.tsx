@@ -17,6 +17,9 @@ export function GoogleLoginButton({ onError }: GoogleLoginButtonProps) {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            prompt: 'select_account', // Sempre mostra a tela de seleção de conta
+          },
         },
       });
       if (error) throw error;
