@@ -83,6 +83,8 @@ function App() {
 
         {/* Auth callback - OAuth providers redirect here */}
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        {/* Clerk SSO callback - Google OAuth redirects here */}
+        <Route path="/sso-callback" element={<AuthCallbackPage />} />
 
         {/* Protected dashboard routes */}
         <Route
