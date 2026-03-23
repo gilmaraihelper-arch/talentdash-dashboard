@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@clerk/clerk-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { 
@@ -56,6 +58,16 @@ const plans: { key: PlanType; name: string; price: string; description: string; 
 
 export function RegisterPage({ store }: RegisterPageProps) {
   const { navigateTo, register, googleLogin } = store;
+  const { isSignedIn, isLoaded } = useAuth();
+  const navigate = useNavigate();
+
+  // Se já está autenticado, redireciona pro dashboard
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isLoaded, isSignedIn, navigate]);
+
   const [step, setStep] = useState<'plan' | 'form'>('form'); // Começa direto no formulário
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('free'); // Plano free por padrão
   const [showPassword, setShowPassword] = useState(false);
