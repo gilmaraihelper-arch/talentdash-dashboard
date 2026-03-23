@@ -73,8 +73,18 @@ export function useAuth(
       }
     } catch (err: unknown) {
       const message = (err as Error).message || 'Erro ao fazer login';
-      // Se já está logado, redireciona pro dashboard em vez de mostrar erro
-      if (message.toLowerCase().includes('already signed in') || message.toLowerCase().includes('já está logado')) {
+      const clerkErrors = (err as any)?.errors;
+      const clerkCode = clerkErrors?.[0]?.code || '';
+      
+      // Se já está logado (qualquer variação do erro), vai pro dashboard
+      if (
+        message.toLowerCase().includes('already signed in') ||
+        message.toLowerCase().includes('já está logado') ||
+        message.toLowerCase().includes('single_session_mode') ||
+        clerkCode.includes('session_exists') ||
+        clerkCode.includes('already_signed_in') ||
+        clerkCode.includes('single_session')
+      ) {
         navigate('/dashboard', { replace: true });
         return;
       }
