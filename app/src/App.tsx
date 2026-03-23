@@ -45,8 +45,8 @@ function ProtectedRoute({
   const { isSignedIn, isLoaded } = useAuth();
   const location = useLocation();
 
-  // Aguarda carregamento do Clerk
-  if (!isLoaded || store.isAuthInitializing) {
+  // Aguarda carregamento do Clerk (mas não o isAuthInitializing do Supabase)
+  if (!isLoaded) {
     return <PageLoader message="Verificando sessão..." />;
   }
 
